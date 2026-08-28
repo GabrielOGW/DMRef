@@ -79,6 +79,13 @@ The drizzle-kit scripts need no env prefix: `drizzle.config.ts` loads `.env.loca
 **Port:** several projects in this workspace fight over 3000, so `dev` is pinned to 3100.
 Whoever starts a dev server kills it — see the workspace root `CLAUDE.md`.
 
+## Next 16 — read the shipped docs first
+
+`AGENTS.md` (generated and re-added by `next dev`) warns that this Next version has breaking
+changes versus most training data. Before writing routing, caching, Server Action or config
+code, read the relevant guide in `node_modules/next/dist/docs/`. Do not assume Next 14/15
+conventions.
+
 ## Conventions
 
 - **Language:** all user-facing content, routes, docs, commits and test descriptions in
