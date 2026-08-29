@@ -9,9 +9,9 @@ repository.
 structure is *derived from writing*, never entered in forms. The GM writes the session notes;
 the system extracts who appeared, where, and what happened.
 
-**Status: PR 4 in review** — scaffold, schema, GitHub auth, campaigns, the Tiptap editor with
-autosave and a `localStorage` draft, and the `@` mention with create-on-the-spot. Next up: PR 5
-(derivation + backlinks) in docs/FASE-0.md.
+**Status: PR 5 in review** — scaffold, schema, GitHub auth, campaigns, the Tiptap editor with
+autosave and a `localStorage` draft, the `@` mention, and derived backlinks. Next up: PR 6
+(sessions) in docs/FASE-0.md.
 
 Read before working here:
 
@@ -114,6 +114,9 @@ conventions.
   fixture gives one throwaway user per test and deletes it afterwards — the delete cascades, so
   a test never leaves rows in your database. It must stay `next dev`: in production Better Auth
   requires a `__Secure-` cookie, which will not travel over plain http.
+- **Derived data is best-effort; the document is not.** `salvarDocumento` drops a mention whose
+  target row has not landed yet rather than let a foreign key kill the body's `UPDATE` — the
+  delete-and-reinsert brings it back on the next save. Never invert that trade.
 - **Server Action payloads must be plain.** `editor.getJSON()` hands back ProseMirror's `attrs`
   objects, which are `Object.create(null)`, and the Flight serializer drops them **silently** —
   no error, no warning. The editor round-trips the document through JSON before sending. Anything

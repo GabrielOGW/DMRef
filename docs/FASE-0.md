@@ -330,19 +330,40 @@ das Server Actions os descarta **em silêncio** — sem erro, sem aviso. Uma vol
 `e2e/mencao.spec.ts` (cria e segue a frase; guarda id e não nome; reaproveita a entidade na
 segunda menção). O orçamento de < 50 ms não foi medido — o filtro é em memória, sem rede.
 
-### PR 5 — derivação e backlinks
+### PR 5 — derivação e backlinks  ✅ concluído
 
-- `src/editor/extract.ts` — caminha o JSON e retorna as menções com `pos`, `context` e
-  `isSecret`. **Código puro.**
-- `src/editor/extract.test.ts` — Vitest. Casos mínimos: documento vazio, menção solta, menção
-  repetida, menção dentro de lista, `context` truncado nas bordas.
-- `salvarDocumento()` ganha a transação apaga-e-reinsere (§6.2)
-- `domain/mentions.ts` — consulta de backlinks (§6.3)
-- Seção "Onde aparece" na página da entidade
+- `src/editor/extract.ts` — puro: JSON entra, menções saem com `pos`, `context` e `isSecret`.
+- `src/editor/extract.test.ts` — 15 casos.
+- `salvarDocumento()` ganhou o apaga-e-reinsere; `domain/mentions.ts`, a consulta de backlinks;
+  a página da entidade, a seção "Onde aparece".
+
+Decisões:
+
+1. **O `pos` é conferido contra o próprio ProseMirror.** Calcular posição fora do editor é
+   aritmética à mão sobre uma convenção alheia, então sete casos montam o schema de verdade
+   (`getSchema` + `Node.fromJSON`) e comparam. Se um nó folha novo entrar no editor e a conta
+   sair do lugar, quebra no teste em vez de em silêncio no banco.
+2. **`batch`, não `transaction`.** O driver HTTP do Neon não tem transação interativa; as três
+   escritas vão num lote, que é uma transação só. A posse é conferida na leitura anterior, já que
+   sem `tx` não dá para pôr a condição de dono no `DELETE` e no `INSERT`.
+3. **Menção órfã não derruba o salvamento.** A entidade nasce por Server Action em segundo plano
+   (§6.1) e pode não ter chegado; a linha derivada fica de fora dessa gravação em vez de a chave
+   estrangeira matar o `UPDATE` do corpo. Como a derivação é apaga-e-reinsere, o salvamento
+   seguinte a traz de volta sozinho. **O texto do usuário é inegociável; o derivado é
+   reconstruível.**
+4. **Salvar não revalida a rota.** "Onde aparece" é do carregamento da página. Revalidar no
+   autosave mandaria props novas para o editor no meio da digitação.
+5. **`isSecret` já é derivado**, embora o nó `secret` só chegue na fase 1 — é uma linha no
+   extract e evita ter que reprocessar documento antigo depois.
 
 **Pronto quando:** mencionar a Morgana em dois textos faz os dois aparecerem na página dela, com
 o trecho de contexto correto; e apagar uma menção do texto a remove da lista no salvamento
-seguinte.
+seguinte. ✅ É exatamente `e2e/backlinks.spec.ts`.
+
+O segundo teste começou reprovando por um motivo que valia registrar: mencionar `@Morgana` numa
+página nova pelo botão de criar faz uma **segunda** Morgana. Era erro do teste — o popover
+oferecia a que já existia — mas mostrou que a diferença entre reaproveitar e duplicar está a uma
+tecla de distância. O teste agora exige uma Morgana só na campanha.
 
 ### PR 6 — sessões
 
