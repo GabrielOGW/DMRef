@@ -9,8 +9,10 @@ repository.
 structure is *derived from writing*, never entered in forms. The GM writes the session notes;
 the system extracts who appeared, where, and what happened.
 
-**Status: PR 0 landed** — Next scaffold, shadcn, Drizzle wiring, scripts. No schema and no
-features yet. Next up: PR 1 (schema + migrations + seed) in docs/FASE-0.md.
+**Status: PR 2 in review** — scaffold, full schema + migrations + seed, GitHub auth and
+campaigns (create, list, open). Auth is code-complete but unproven end to end: the GitHub OAuth
+App does not exist yet, so `GITHUB_CLIENT_ID`/`SECRET` are placeholders. Next up: PR 3 (Tiptap
+editor + autosave) in docs/FASE-0.md.
 
 Read before working here:
 
@@ -94,6 +96,12 @@ conventions.
 - **Search:** two mechanisms, two purposes — `pg_trgm` on `entities.name` for the Ctrl+K palette,
   Postgres FTS on the generated `search_vector` for content. Don't merge them.
 - **Data access:** Neon HTTP driver for reads; batched transaction for the save-and-derive path.
+- **Auth:** `src/auth.ts` owns the Better Auth instance plus `sessaoAtual()` and
+  `exigirUsuario()`. Every Server Action starts with `exigirUsuario()` and every query scopes by
+  `ownerId` — the `(app)` layout gate is UI convenience, not a security boundary. Sign-in and
+  sign-out are Server Actions; there is deliberately no `createAuthClient` yet.
+- **`session` vs `sessions`:** the singular table is a login session (the name Better Auth's
+  adapter looks for — never rename it); the plural is a table session. Same file.
 - **Column casing:** declare columns in camelCase and let Drizzle map to snake_case
   (`casing: 'snake_case'`, set in both `drizzle.config.ts` and `src/db/index.ts`). Never name
   columns by hand — the two configs must stay in sync.
