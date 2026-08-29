@@ -2,18 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { Placeholder } from '@tiptap/extension-placeholder';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
+import { Placeholder } from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
 import type { TiptapDoc } from '@/db/schema';
 
-import { guardarRascunho, limparRascunho, lerRascunho } from './rascunho.ts';
+import { guardarRascunho, lerRascunho, limparRascunho } from './rascunho.ts';
 
 const ESPERA_MS = 1500;
 
-type Estado = 'limpo' | 'digitando' | 'salvando' | 'erro';
+type Estado = 'limpo' | 'digitando' | 'salvando' | 'salvo' | 'erro';
 
 export function Editor({
   entityId,
@@ -31,10 +31,7 @@ export function Editor({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendente = useRef<TiptapDoc | null>(null);
   const [estado, setEstado] = useState<Estado>('limpo');
-
-  // Só na primeira renderização: depois disso quem manda no documento é o Tiptap.
-  const [rascunho] = useState(() => lerRascunho(entityId, salvoEm));
-  const [recuperado, setRecuperado] = useState(rascunho !== null);
+  const [recuperado, setRecuperado] = useState(false);
 
   async function gravar() {
     const doc = pendente.current;
@@ -44,7 +41,7 @@ export function Editor({
     try {
       base.current = await salvar(doc);
       limparRascunho(entityId);
-      setEstado('limpo');
+      setEstado('salvo');
       setRecuperado(false);
     } catch {
       // O rascunho continua no localStorage — é justamente para isto que ele existe.
@@ -61,11 +58,9 @@ export function Editor({
       TaskItem.configure({ nested: true }),
       Placeholder.configure({ placeholder: 'Escreva. A estrutura vem depois.' }),
     ],
-    content: rascunho ?? conteudo ?? undefined,
+    content: conteudo ?? undefined,
     editorProps: {
-      attributes: {
-        class: 'prose-grimorio min-h-[60vh] outline-none',
-      },
+      attributes: { class: 'prose-grimorio min-h-[60vh] outline-none' },
     },
     onUpdate({ editor }) {
       const doc = editor.getJSON() as TiptapDoc;
@@ -77,6 +72,17 @@ export function Editor({
       timer.current = setTimeout(gravar, ESPERA_MS);
     },
   });
+
+  // A recuperação é efeito, não render: ler o localStorage durante a renderização
+  // dá um resultado no servidor (vazio) e outro no cliente, e a hidratação quebra.
+  useEffect(() => {
+    if (!editor) return;
+    const rascunho = lerRascunho(entityId, base.current);
+    if (!rascunho) return;
+    editor.commands.setContent(rascunho, { emitUpdate: false });
+    pendente.current = rascunho;
+    setRecuperado(true);
+  }, [editor, entityId]);
 
   // Desmontou com alteração pendente (navegou para outra página): grava agora.
   useEffect(() => {
@@ -92,6 +98,7 @@ export function Editor({
       <p className="text-muted-foreground mb-4 h-4 text-xs">
         {recuperado ? 'Rascunho local recuperado. ' : null}
         {estado === 'salvando' ? 'Salvando…' : null}
+        {estado === 'salvo' ? 'Salvo' : null}
         {estado === 'erro' ? 'Não consegui salvar — o texto está guardado neste navegador.' : null}
       </p>
       <EditorContent editor={editor} />

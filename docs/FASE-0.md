@@ -268,8 +268,26 @@ página de prova temporária cujo salvamento falhava de propósito: parágrafo d
 no `localStorage` → recarga → texto de volta, com o aviso "Rascunho local recuperado".
 
 **Pronto quando:** você escreve um parágrafo, fecha a aba no meio da digitação, reabre e o texto
-está lá. Teste isso de verdade, com a aba fechada mesmo. **Falta você fazer isso** — depende do
-login, que depende do GitHub OAuth App do PR 2.
+está lá. ✅ **Coberto por Playwright** (`e2e/editor.spec.ts`), num teste que derruba a rede da
+aba para o salvamento falhar de verdade em vez de correr contra o debounce.
+
+#### Os testes e2e (acréscimo ao plano)
+
+Playwright entrou aqui a pedido: `npm run test:e2e`, `next dev` na **3101** para nunca brigar
+com a 3100. O aperto de mão do GitHub não é automatizável, então `e2e/apoio.ts` planta as linhas
+`user` e `session` e assina o cookie como o better-call assina (HMAC-SHA256, `token.assinatura`,
+percent-encoded). A fixture `usuario` dá um usuário descartável por teste e o apaga no fim — o
+cascade limpa campanhas e páginas junto, então a suíte nunca deixa lixo no seu banco.
+
+**O primeiro run achou dois defeitos que os testes de unidade não pegariam:**
+
+1. **Quebra de hidratação no editor.** A recuperação do rascunho era feita durante a renderização
+   (`useState(() => lerRascunho(...))`), o que dá vazio no servidor e o rascunho no cliente. O
+   React se recuperava regenerando a árvore, então na tela parecia funcionar. Virou `useEffect` +
+   `setContent(..., { emitUpdate: false })`.
+2. **Não existia sinal de "salvo".** A barra de status ficava vazia tanto digitando quanto depois
+   de gravar, o que impedia o teste de esperar pelo salvamento — e impedia você de saber se o
+   texto estava seguro. Estado `salvo` acrescentado.
 
 ### PR 4 — a menção `@` ⭐
 
