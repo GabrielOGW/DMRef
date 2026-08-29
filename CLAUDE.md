@@ -9,9 +9,9 @@ repository.
 structure is *derived from writing*, never entered in forms. The GM writes the session notes;
 the system extracts who appeared, where, and what happened.
 
-**Status: PR 5 in review** — scaffold, schema, GitHub auth, campaigns, the Tiptap editor with
-autosave and a `localStorage` draft, the `@` mention, and derived backlinks. Next up: PR 6
-(sessions) in docs/FASE-0.md.
+**Status: PR 6 in review** — everything through numbered sessions and a Histórico ordered by
+session number. Only PR 7 (`Ctrl+K`) is left before Fase 0 closes and the real test begins:
+three whole sessions run inside the app.
 
 Read before working here:
 
