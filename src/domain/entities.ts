@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, or } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, isNull, or, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { campaigns, entities, entityTypes } from '@/db/schema';
@@ -78,4 +78,62 @@ export function listarTiposDeEntidade(campaignId: string) {
     .from(entityTypes)
     .where(or(isNull(entityTypes.campaignId), eq(entityTypes.campaignId, campaignId)))
     .orderBy(asc(entityTypes.label));
+}
+
+/**
+ * Alteração de uma entidade com a posse dentro do `WHERE`, por `EXISTS` sobre
+ * `campaigns`: uma ida ao banco, e id de outra pessoa simplesmente não casa.
+ */
+async function atualizar(
+  ownerId: string,
+  entityId: string,
+  valores: Partial<typeof entities.$inferInsert>,
+) {
+  const [linha] = await db
+    .update(entities)
+    .set({ ...valores, updatedAt: new Date() })
+    .where(
+      and(
+        eq(entities.id, entityId),
+        exists(
+          db
+            .select({ um: sql`1` })
+            .from(campaigns)
+            .where(and(eq(campaigns.id, entities.campaignId), eq(campaigns.ownerId, ownerId))),
+        ),
+      ),
+    )
+    .returning({ slug: entities.slug });
+
+  if (!linha) throw new Error('Página não encontrada');
+  return linha;
+}
+
+/**
+ * Renomear é `UPDATE name` e nada mais (ARQUITETURA.md §6.4). O slug não muda —
+ * ele é o endereço, e renomear não pode quebrar link que já existe. Os documentos
+ * guardam id; o `label` do nó é cache revalidado na renderização.
+ */
+export function renomearEntidade(ownerId: string, entityId: string, nome: string) {
+  const name = nome.trim();
+  if (!name) throw new Error('Nome vazio');
+  return atualizar(ownerId, entityId, { name });
+}
+
+/** Tipos são dados: trocar é uma coluna, não uma migração (invariante 5). */
+export function mudarTipoDaEntidade(ownerId: string, entityId: string, typeKey: string) {
+  return atualizar(ownerId, entityId, { typeKey });
+}
+
+/**
+ * Sem hard delete (invariante 8, §6.5): apagar deixaria nó órfão no meio de texto
+ * que alguém escreveu. `archivedAt` some das listas e da busca, e a página
+ * continua alcançável pela URL — é de lá que se desarquiva.
+ */
+export function arquivarEntidade(ownerId: string, entityId: string) {
+  return atualizar(ownerId, entityId, { archivedAt: new Date() });
+}
+
+export function desarquivarEntidade(ownerId: string, entityId: string) {
+  return atualizar(ownerId, entityId, { archivedAt: null });
 }

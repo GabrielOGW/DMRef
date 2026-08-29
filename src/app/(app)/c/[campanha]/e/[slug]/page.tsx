@@ -5,6 +5,9 @@ import { exigirUsuario } from '@/auth';
 import { buscarEntidade, listarEntidades, listarTiposDeEntidade } from '@/domain/entities';
 import { backlinks } from '@/domain/mentions';
 import { Editor } from '@/editor/Editor';
+import { revalidarRotulos } from '@/editor/rotulos';
+
+import { EditarPagina } from '../../editar-pagina.tsx';
 
 import { criarEntidadeMencionadaAction, salvarDocumentoAction } from '../../actions.ts';
 
@@ -25,6 +28,13 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
     listarTiposDeEntidade(campanha.id),
     backlinks(entidade.id),
   ]);
+  // O `label` de cada menção é cache: quem manda é o nome atual da entidade
+  // (ARQUITETURA.md §6.4). O mapa já veio carregado para o autocomplete do `@`.
+  const corpo = revalidarRotulos(
+    entidade.content,
+    new Map(mencionaveis.map((m) => [m.id, m.name])),
+  );
+
   // A consulta já vem ordenada por número de sessão; aqui só se separa em duas listas.
   const historico = aparicoes.filter((a) => a.sessao !== null);
   const avulsas = aparicoes.filter((a) => a.sessao === null);
@@ -45,11 +55,27 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
         {campanha.name}
       </Link>
       <h1 className="mt-1 mb-1 text-2xl font-semibold tracking-tight">{entidade.name}</h1>
-      <p className="text-muted-foreground mb-6 text-xs">{entidade.typeKey}</p>
+      <p className="text-muted-foreground mb-2 text-xs">
+        {tipos.find((t) => t.key === entidade.typeKey)?.label ?? entidade.typeKey}
+        {entidade.archivedAt ? ' · arquivada' : null}
+      </p>
+      <div className="mb-6">
+        <EditarPagina
+          campanha={campanha.slug}
+          entidade={{
+            id: entidade.id,
+            name: entidade.name,
+            slug: entidade.slug,
+            typeKey: entidade.typeKey,
+            arquivada: entidade.archivedAt !== null,
+          }}
+          tipos={tipos}
+        />
+      </div>
 
       <Editor
         entityId={entidade.id}
-        conteudo={entidade.content}
+        conteudo={corpo}
         salvoEm={entidade.updatedAt.toISOString()}
         salvar={salvar}
         mencionaveis={mencionaveis.map(({ id, name, typeKey }) => ({ id, name, typeKey }))}
