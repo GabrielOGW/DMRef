@@ -2,12 +2,12 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { auth, exigirUsuario } from '@/auth';
+import { exigirUsuario, obterAuth } from '@/auth';
 import { Button } from '@/components/ui/button';
 
 async function sair() {
   'use server';
-  await auth.api.signOut({ headers: await headers() });
+  await obterAuth().api.signOut({ headers: await headers() });
   redirect('/entrar');
 }
 
