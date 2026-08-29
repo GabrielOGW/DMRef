@@ -41,6 +41,19 @@ grafo · mapas · portal de jogador · painel de `metadata` · busca full-text �
 | Banco Neon | Marketplace da Vercel → Neon → plano Free. Injeta `DATABASE_URL` nos 3 ambientes |
 | GitHub OAuth App | Settings → Developer settings → OAuth Apps. Callback: `http://localhost:3100/api/auth/callback/github` e o equivalente em produção |
 
+### Endereços que importam
+
+| | URL |
+|---|---|
+| Produção (público, é o alias de verdade) | `https://dm-ref.vercel.app` |
+| Callback do OAuth em produção | `https://dm-ref.vercel.app/api/auth/callback/github` |
+| Callback do OAuth local | `http://localhost:3100/api/auth/callback/github` |
+
+O domínio longo `dm-ref-gabriel-…vercel.app` também existe, mas está atrás do SSO da Vercel e
+**não serve como callback**. `BETTER_AUTH_URL` está fixada em produção no alias curto, em vez de
+depender do fallback para `VERCEL_PROJECT_PRODUCTION_URL`: um valor invisível custou uma noite de
+tentativa e erro.
+
 ### `.env.local`
 
 ```bash
@@ -72,9 +85,9 @@ Decidido em 2026-08-28, ao conferir o ambiente. Nada disso bloqueia a Fase 0.
 
 | # | Pendência | Decisão | Quando resolver |
 |---|---|---|---|
-| I1 | **Proteção de deployment (SSO da Vercel) ligada em todas as URLs `*.vercel.app`.** Só o dono da conta abre o site. | **Manter por enquanto** — o app é do mestre e ninguém mais precisa entrar. | **Obrigatório antes do portal do jogador** (fase 3): o portal é uma rota pública por token e não funciona sob SSO. Adiado, não cancelado. |
+| I1 | **Proteção de deployment (SSO da Vercel).** Medido em 2026-08-29: vale para as URLs de deployment e para o domínio longo (`dm-ref-gabriel-…`, responde 302 para o login da Vercel), **mas não para o alias de produção** `dm-ref.vercel.app`, que responde o próprio app. | **Manter por enquanto** — o app é do mestre e ninguém mais precisa entrar. | **Obrigatório antes do portal do jogador** (fase 3): o portal é uma rota pública por token e não funciona sob SSO. Adiado, não cancelado. |
 | I2 | **Região das functions** deve ser `gru1` (São Paulo) para casar com o banco em `sa-east-1`. O padrão do Hobby é `iad1`, e cada consulta atravessaria o continente. | Configurado como `gru1`; não deu para confirmar pela API. | Conferir em Settings → Functions quando a primeira consulta ao banco existir (PR 2). Se estiver em `iad1`, trocar — o orçamento do `Ctrl+K` é 30 ms. |
-| I4 | **`GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` não existem na Vercel**, então `/entrar` responde 500 em produção. O build já não depende delas (PR #10). | Adicionar o callback de produção ao **mesmo** OAuth App — o GitHub aceita até 10 redirect URIs, não precisa de app novo — e cadastrar o par na Vercel. | Antes da primeira sessão mestrada em produção. Rodando local na 3100, nada disso bloqueia. |
+| I4 | **Configuração do OAuth em produção.** Resolvido em 2026-08-29: o par do GitHub está cadastrado na Vercel e o callback de produção, no mesmo OAuth App (o GitHub aceita até 10 redirect URIs — não precisa de app novo). | — | Feito. |
 | I3 | **Nome do projeto.** O repositório é `DMRef`; o produto ainda se chama Grimório (pasta local, `package.json`, título). | Segue como Grimório até decisão contrária — repositório é endereço, não marca. | A qualquer momento; quanto antes, menos lugares. |
 
 ---
