@@ -204,8 +204,19 @@ foi aplicada no Neon (13 tabelas, FK presente); com o servidor de produção de 
 `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` estão com `preencher`. O `BETTER_AUTH_SECRET` já
 foi gerado.
 
+**Correção depois do primeiro login real (migração `0002_account_issuer`):** o callback do
+GitHub voltava `internal_server_error`. A causa não era credencial: **a CLI do Better Auth não
+gera a coluna `account.issuer`**, que a versão 1.7 exige — a identidade de uma conta passou a
+ser `(issuer, accountId)`, com índice único. O gerador Drizzle deles ficou para trás do runtime.
+Coluna e índice foram escritos à mão e estão comentados no schema para não sumirem no próximo
+`generate`.
+
+Antes disso houve um susto que não era bug: as credenciais tinham sido coladas no `.env`, mas o
+`.env.local` ainda dizia `preencher`, e no Next o `.env.local` ganha. As quatro variáveis do
+Better Auth moram no `.env.local` — o `.env` é reescrito inteiro pelo `vercel env pull`.
+
 **Pronto quando:** você entra com GitHub, cria a campanha "Sombras de Valoria" e ela aparece na
-lista após um F5.
+lista após um F5. ✅ **Feito em 2026-08-29:** login pelo GitHub, campanha e página criadas.
 
 ### PR 3 — editor e salvamento  ✅ concluído
 

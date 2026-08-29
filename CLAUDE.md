@@ -100,6 +100,10 @@ conventions.
   `exigirUsuario()`. Every Server Action starts with `exigirUsuario()` and every query scopes by
   `ownerId` — the `(app)` layout gate is UI convenience, not a security boundary. Sign-in and
   sign-out are Server Actions; there is deliberately no `createAuthClient` yet.
+- **The Better Auth CLI's Drizzle output is incomplete.** `npx @better-auth/cli generate` omits
+  `account.issuer` and its unique `(issuer, accountId)` index, both of which 1.7 requires — the
+  OAuth callback 500s without them. Never paste a regenerated schema over the hand-kept one
+  without diffing.
 - **`session` vs `sessions`:** the singular table is a login session (the name Better Auth's
   adapter looks for — never rename it); the plural is a table session. Same file.
 - **Drafts:** `src/editor/rascunho.ts` snapshots the document to `localStorage` on every change
