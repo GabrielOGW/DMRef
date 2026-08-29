@@ -128,6 +128,11 @@ conventions.
   objects, which are `Object.create(null)`, and the Flight serializer drops them **silently** —
   no error, no warning. The editor round-trips the document through JSON before sending. Anything
   else crossing that boundary deserves the same suspicion.
+- **Theme follows the OS, and there is no toggle.** The dark palette lives in a
+  `@media (prefers-color-scheme: dark)` block (not a `.dark` class), `@custom-variant dark` is
+  bound to the same media query so `dark:` utilities agree, and `:root` sets
+  `color-scheme: light dark` so native controls follow. The user already chose light or dark in
+  their OS — a second switch is a second thing to get wrong.
 - **Drafts:** `src/editor/rascunho.ts` snapshots the document to `localStorage` on every change
   and clears it only when the server confirms the save. The snapshot carries the `updatedAt` it
   was born from, never a timestamp — never compare the browser clock to the database's.
