@@ -1,3 +1,4 @@
+import type { JSONContent } from '@tiptap/core';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -20,8 +21,8 @@ import {
 
 // ── tipos de apoio ──────────────────────────────────────────────────────────
 
-/** Documento do Tiptap. A forma completa chega no PR 3; aqui basta tipar a coluna. */
-export type TiptapDoc = { type: 'doc'; content?: unknown[] };
+/** Documento do Tiptap — a forma que `editor.getJSON()` devolve. */
+export type TiptapDoc = JSONContent & { type: 'doc' };
 
 /** Campo declarado por um tipo de entidade. Fica vazio na Fase 0 — ver ARQUITETURA.md §4.1. */
 export type FieldDef = {
