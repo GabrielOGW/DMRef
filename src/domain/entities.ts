@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, exists, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, exists, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { campaigns, entities, entityTypes } from '@/db/schema';
+import { campaigns, entities } from '@/db/schema';
 
 import { inserirComSlugUnico } from './slug.ts';
 
@@ -69,15 +69,6 @@ export async function criarEntidade(input: {
       .returning();
     return entidade;
   });
-}
-
-/** Tipos globais mais os da campanha. São dados, não enum (invariante 5). */
-export function listarTiposDeEntidade(campaignId: string) {
-  return db
-    .select({ key: entityTypes.key, label: entityTypes.label })
-    .from(entityTypes)
-    .where(or(isNull(entityTypes.campaignId), eq(entityTypes.campaignId, campaignId)))
-    .orderBy(asc(entityTypes.label));
 }
 
 /**

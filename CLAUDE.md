@@ -128,6 +128,14 @@ conventions.
   objects, which are `Object.create(null)`, and the Flight serializer drops them **silently** —
   no error, no warning. The editor round-trips the document through JSON before sending. Anything
   else crossing that boundary deserves the same suspicion.
+- **Categories are `entity_types` rows, not a menu.** The sidebar's fixed list (`sessao`, `pj`,
+  `npc`, `local`, `evento`, `nota`) is display order, not type definition — adding a type is still
+  an `INSERT` with no migration and no code change (invariant 5). Global types (`campaign_id NULL`)
+  cannot be deleted because **nothing** can: dropping a type would leave entities pointing at a
+  key that no longer exists.
+- **The sidebar lives in the campaign layout, so mutations must `revalidatePath(..., 'layout')`** —
+  a layout does not re-run when you navigate between sibling routes. The one deliberate exception
+  is the `@`-mention creation path, which runs while someone is typing.
 - **Theme follows the OS, and there is no toggle.** The dark palette lives in a
   `@media (prefers-color-scheme: dark)` block (not a `.dark` class), `@custom-variant dark` is
   bound to the same media query so `dark:` utilities agree, and `:root` sets
