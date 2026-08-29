@@ -389,16 +389,40 @@ O agrupamento quebrou os dois testes do PR 5, que procuravam o título "Onde apa
 sinal certo na hora certa: eles agora localizam a seção em si, e as páginas de apoio deixaram de
 se chamar "Sessão", que era o que confundia.
 
-### PR 7 — `Ctrl+K`
+### PR 7 — `Ctrl+K`  ✅ concluído
 
-- `Command` do shadcn em dialog global
-- `domain/search.ts` — trigram sobre `entities.name`, `similarity()`, limite 10
-- Navegação por teclado e Enter para abrir
+- `domain/search.ts` — trigram sobre `entities.name`, limite 10.
+- `GET /api/busca` e `paleta.tsx` no `Command` do shadcn, montada no layout de
+  `c/[campanha]` para existir na campanha e em toda página dela.
+
+Decisões:
+
+1. **`ILIKE` + `<%`, ordem por `word_similarity()` — nunca o operador `%`.** Este PR é o consumo
+   da medição feita no PR 1 (§3.6): `similarity()` divide pelos trigramas do nome inteiro, e
+   consulta curta é exatamente o que uma paleta recebe. O e2e usa `morg` e `rod` de propósito:
+   são os dois casos que reprovavam com `%`.
+2. **Route Handler, não Server Action.** As actions são despachadas uma por vez por cliente, e
+   uma paleta digitando enfileiraria tecla atrás de tecla. O guia do Next 16 manda usar Route
+   Handler para leitura, e é o que a paleta faz.
+3. **`shouldFilter={false}` no `cmdk`.** Quem filtra é o Postgres; deixar a biblioteca filtrar
+   por cima esconderia justamente os acertos que o trigram traz e o `includes` não traz.
+4. **A lista vazia é derivada, não guardada.** Apagar a busca não pode deixar o resultado
+   anterior na tela, e limpar por `setState` dentro de efeito é cascata de renderização à toa.
 
 **Pronto quando:** `Ctrl+K` + `morg` acha a Lady Morgana em menos de um segundo, de qualquer
-página.
+página. ✅ `e2e/paleta.spec.ts`, com a paleta aberta de dentro de outra página.
 
 ---
+
+## Estado em 2026-08-29: os sete PRs estão de pé
+
+Tudo o que a Fase 0 listou existe e tem teste: 28 casos de unidade e 14 e2e (`npm test`,
+`npm run test:e2e`). **Mas a Fase 0 não fecha por lista de features** — o critério de saída é
+uso real, e ele continua aberto.
+
+Só um dos critérios de pronto não foi verificado por máquina: o do PR 3, **fechar a aba no meio
+da digitação**. O e2e derruba a rede da aba, que é o mesmo risco por outro caminho; a aba fechada
+mesmo é com você.
 
 ## Depois do PR 7: parar
 

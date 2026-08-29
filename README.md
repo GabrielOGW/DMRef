@@ -12,7 +12,9 @@ escondida na @Floresta_Negra antes do assassinato do @Rei_Alaric.
 → a página da Lady Morgana ganha uma linha no histórico, ordenada por número de sessão.
 A Floresta Negra registra a menção. O Rei Alaric idem. Nenhum formulário foi aberto.
 
-**Status:** esqueleto no ar (PR 0). O editor chega no PR 4 — ver [docs/FASE-0.md](docs/FASE-0.md).
+**Status:** a Fase 0 está de pé — escrever, `@` mencionar, backlinks, sessões numeradas e
+`Ctrl+K`. Falta o que nenhum teste dá: mestrar três sessões inteiras aqui dentro.
+Ver [docs/FASE-0.md](docs/FASE-0.md).
 
 ## Documentação
 

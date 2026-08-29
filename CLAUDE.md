@@ -9,9 +9,11 @@ repository.
 structure is *derived from writing*, never entered in forms. The GM writes the session notes;
 the system extracts who appeared, where, and what happened.
 
-**Status: PR 6 in review** — everything through numbered sessions and a Histórico ordered by
-session number. Only PR 7 (`Ctrl+K`) is left before Fase 0 closes and the real test begins:
-three whole sessions run inside the app.
+**Status: Fase 0 code-complete (PR 7 in review)** — auth, campaigns, the editor with autosave and
+a `localStorage` draft, the `@` mention, derived backlinks, numbered sessions, and the `Ctrl+K`
+palette. **Do not start Fase 1.** Fase 0 does not close on a feature list: it closes when three
+whole sessions have been run inside the app, and the four questions at the end of docs/FASE-0.md
+have real answers. Building ahead of that is building on a guess.
 
 Read before working here:
 
