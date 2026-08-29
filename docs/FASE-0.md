@@ -59,6 +59,18 @@ Quem sobe o servidor é quem mata — ver o `CLAUDE.md` da raiz do workspace.
 
 ---
 
+## Pendências de infraestrutura
+
+Decidido em 2026-08-28, ao conferir o ambiente. Nada disso bloqueia a Fase 0.
+
+| # | Pendência | Decisão | Quando resolver |
+|---|---|---|---|
+| I1 | **Proteção de deployment (SSO da Vercel) ligada em todas as URLs `*.vercel.app`.** Só o dono da conta abre o site. | **Manter por enquanto** — o app é do mestre e ninguém mais precisa entrar. | **Obrigatório antes do portal do jogador** (fase 3): o portal é uma rota pública por token e não funciona sob SSO. Adiado, não cancelado. |
+| I2 | **Região das functions** deve ser `gru1` (São Paulo) para casar com o banco em `sa-east-1`. O padrão do Hobby é `iad1`, e cada consulta atravessaria o continente. | Configurado como `gru1`; não deu para confirmar pela API. | Conferir em Settings → Functions quando a primeira consulta ao banco existir (PR 2). Se estiver em `iad1`, trocar — o orçamento do `Ctrl+K` é 30 ms. |
+| I3 | **Nome do projeto.** O repositório é `DMRef`; o produto ainda se chama Grimório (pasta local, `package.json`, título). | Segue como Grimório até decisão contrária — repositório é endereço, não marca. | A qualquer momento; quanto antes, menos lugares. |
+
+---
+
 ## Sequência de PRs
 
 Cada PR é mergeável sozinho e tem um critério de pronto verificável. Um branch por PR, nada
@@ -112,16 +124,40 @@ Decisões pequenas tomadas aqui:
 **Verificado:** `typecheck`, `lint`, `test` e `build` passam; o build gera `/` estaticamente.
 **Falta:** repositório no GitHub, projeto na Vercel e banco Neon — dependem das suas credenciais.
 
-### PR 1 — schema e migrações
+### PR 1 — schema e migrações  ✅ concluído
 
-- `src/db/schema.ts` conforme §5.2 da arquitetura — **todas** as tabelas, inclusive as que a
-  Fase 0 não usa (`relationships`, `events`, `open_threads`). Criar o schema completo agora é
-  mais barato que migrar depois, e não custa código de aplicação.
-- Migração SQL à mão para `pg_trgm`, coluna gerada `search_vector` e os três índices GIN (§5.1).
-- `src/db/seed.ts`: `entity_types` e `relationship_types` globais (§5.3).
+- `src/db/schema.ts` — as 9 tabelas de ARQUITETURA.md §5.2, inclusive as que a Fase 0 não usa
+  (`entity_relationships`, `events`, `open_threads`). Criar o schema completo agora é mais barato
+  que migrar depois e não custa código de aplicação.
+- `src/db/migrations/0000_inicial.sql` — gerado pelo drizzle-kit, com
+  `CREATE EXTENSION IF NOT EXISTS pg_trgm` acrescentado à mão no topo (precisa existir antes do
+  índice `entities_name_trgm_idx`).
+- `src/db/seed.ts` — 17 tipos de entidade e 11 tipos de relação globais.
 
-**Pronto quando:** `npm run db:migrate && npm run seed` roda limpo num branch Neon novo, e
-`SELECT * FROM entity_types` traz os tipos padrão.
+**Aplicado e verificado no Neon:** 9 tabelas, `pg_trgm` instalada, `search_vector` `GENERATED
+ALWAYS … STORED`, seed idempotente (segunda execução insere 0), e uma prova ponta a ponta
+(campanha + entidade descartáveis) confirmando que o FTS acha texto **dentro do JSON do Tiptap**
+e no `summary`.
+
+Três desvios do plano original, todos deliberados:
+
+1. **`campaigns.ownerId` é `text` sem FK.** Quem define a tabela de usuários é o Better Auth,
+   pela CLI dele, no PR 2 — adivinhar o schema aqui só criaria uma migração de conserto. A FK
+   entra no PR 2.
+2. **`nullsNotDistinct()` não existe nesta versão do Drizzle.** Sem ele, `(NULL, 'npc')` nunca
+   colide com `(NULL, 'npc')` e o seed duplicaria os tipos globais a cada execução. Resolvido com
+   um índice único **parcial** (`... ON (key) WHERE campaign_id IS NULL`), que dá a mesma
+   garantia e é expressável no schema.
+3. **O tipo genérico `personagem` foi descartado** — ver ARQUITETURA.md §5.3.
+
+E uma correção de projeto, medida contra o banco: **o operador `%` do pg_trgm não serve para o
+palette** (falha em `morg` → Lady Morgana e `rod` → Capitão Roderick, que são exatamente o tipo
+de consulta que o `Ctrl+K` recebe). A consulta correta usa `ILIKE`/`<%` com ordem por
+`word_similarity()`. Tabela com os números em ARQUITETURA.md §3.6 — **ler antes do PR 7.**
+
+Detalhe de execução: o `seed` roda por type stripping do Node, que é ESM e exige extensão
+explícita no import. Por isso `src/db/index.ts` importa `./schema.ts` e o `tsconfig.json` ganhou
+`allowImportingTsExtensions`.
 
 ### PR 2 — auth e campanhas
 

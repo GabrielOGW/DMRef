@@ -151,8 +151,38 @@ magic link.
 | | Paleta `Ctrl+K` | Busca de conteúdo |
 |---|---|---|
 | Mecanismo | `pg_trgm` sobre `entities.name` | FTS sobre `tsvector` gerado |
-| Consulta | GIN `gin_trgm_ops`, ordem por `similarity()` | `websearch_to_tsquery('portuguese', …)`, `ts_rank`, `ts_headline` |
+| Consulta | GIN `gin_trgm_ops`, filtro `ILIKE` **ou** `<%`, ordem por `word_similarity()` | `websearch_to_tsquery('portuguese', …)`, `ts_rank`, `ts_headline` |
 | Uso | 90% do uso real, precisa de <30 ms | "aquela cena da torre, não lembro a sessão" |
+
+#### Não use o operador `%` no palette
+
+Medido contra o banco real no PR 1:
+
+| consulta | alvo | `similarity()` | `%` (limiar 0.3) | `<%` | `ILIKE` |
+|---|---|---|---|---|---|
+| `morg` | Lady Morgana | 0.29 | **falha** | ok (0.80) | ok |
+| `rod` | Capitão Roderick | 0.17 | **falha** | ok (0.75) | ok |
+| `alar` | Rei Alaric | 0.33 | ok | ok | ok |
+| `sombras` | Ordem das Sombras | 0.47 | ok | ok | ok |
+
+`similarity()` divide pelos trigramas da string **inteira**, então quanto mais longo o nome, mais
+uma consulta curta é penalizada — e consulta curta é exatamente o que um command palette recebe.
+`word_similarity()` compara a consulta com o melhor trecho de palavra dentro do nome e não sofre
+disso.
+
+A consulta do `Ctrl+K` fica:
+
+```sql
+SELECT id, name, type_key
+FROM   entities
+WHERE  campaign_id = $1 AND archived_at IS NULL
+  AND  (name ILIKE '%' || $2 || '%' OR $2 <% name)
+ORDER BY word_similarity($2, name) DESC, length(name), name
+LIMIT 10;
+```
+
+`ILIKE` pega a subcadeia exata (o caso comum) e é acelerado pelo mesmo índice GIN
+`gin_trgm_ops` a partir de 3 caracteres; `<%` cobre erro de digitação. Um índice, dois operadores.
 
 Nomes próprios de fantasia não se beneficiam de stemming português — para nomes o trigram é quem
 trabalha; o FTS serve à prosa. Por isso os dois.
@@ -404,9 +434,13 @@ export const openThreads = pgTable('open_threads', {
 
 `entity_types` com `campaign_id NULL` são globais (herdados por toda campanha):
 
-`personagem` · `pj` · `npc` · `local` · `cidade` · `regiao` · `reino` · `organizacao` ·
-`faccao` · `item` · `criatura` · `missao` · `nota` · `segredo`
+`pj` · `npc` · `local` · `cidade` · `regiao` · `reino` · `organizacao` · `faccao` · `item` ·
+`criatura` · `missao` · `nota` · `segredo`
 e os narrativos (`is_narrative = true`): `sessao` · `ato` · `arco` · `evento`.
+
+O tipo genérico `personagem` foi descartado no PR 1: com `pj` e `npc` ao lado, ele vira uma
+terceira opção ambígua bem no fluxo de "criar na hora", que é o caminho P0. Tipos são dados — se
+fizer falta, é um `INSERT`.
 
 ---
 
