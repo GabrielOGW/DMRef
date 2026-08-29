@@ -9,6 +9,8 @@ import StarterKit from '@tiptap/starter-kit';
 
 import type { TiptapDoc } from '@/db/schema';
 
+import type { ItemMencionavel, TipoDeEntidade } from './ListaDeMencao.tsx';
+import { criarExtensaoDeMencao, type Mencionaveis } from './mention.ts';
 import { guardarRascunho, lerRascunho, limparRascunho } from './rascunho.ts';
 
 const ESPERA_MS = 1500;
@@ -20,18 +22,39 @@ export function Editor({
   conteudo,
   salvoEm,
   salvar,
+  mencionaveis,
+  tipos,
+  criarMencionada,
 }: {
   entityId: string;
   conteudo: TiptapDoc | null;
   /** `updatedAt` do servidor. Só marca a versão — nunca é comparado com o relógio local. */
   salvoEm: string | null;
   salvar: (doc: TiptapDoc) => Promise<string>;
+  /** Campanha inteira, carregada de uma vez: o `@` filtra em memória. */
+  mencionaveis: ItemMencionavel[];
+  tipos: TipoDeEntidade[];
+  criarMencionada: (entrada: ItemMencionavel) => Promise<void>;
 }) {
   const base = useRef(salvoEm);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendente = useRef<TiptapDoc | null>(null);
   const [estado, setEstado] = useState<Estado>('limpo');
   const [recuperado, setRecuperado] = useState(false);
+
+  // Caixa mutável, criada uma vez: uma entidade nascida do `@` precisa ser
+  // encontrável na frase seguinte, antes de qualquer recarga. É `useState` e não
+  // `useRef` porque o valor é lido pelo Tiptap, não pela renderização.
+  const [mencoes] = useState<Mencionaveis>(() => ({
+    itens: [...mencionaveis],
+    tipos,
+    aoCriar: (entrada) => {
+      // ponytail: sem fila de repetição. Se o INSERT falhar, o nó fica apontando
+      // para um id que não existe e o salvamento seguinte acusa — dá para trocar
+      // por uma fila quando alguém escrever offline de verdade.
+      void criarMencionada(entrada).catch(() => setEstado('erro'));
+    },
+  }));
 
   async function gravar() {
     const doc = pendente.current;
@@ -57,13 +80,18 @@ export function Editor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({ placeholder: 'Escreva. A estrutura vem depois.' }),
+      criarExtensaoDeMencao(() => mencoes),
     ],
     content: conteudo ?? undefined,
     editorProps: {
       attributes: { class: 'prose-grimorio min-h-[60vh] outline-none' },
     },
     onUpdate({ editor }) {
-      const doc = editor.getJSON() as TiptapDoc;
+      // Uma volta pelo JSON não é paranoia: os `attrs` que o ProseMirror devolve
+      // são objetos sem protótipo (`Object.create(null)`), e o serializador das
+      // Server Actions os descarta **em silêncio** — a menção chegava no banco
+      // como `{ type: 'mention' }`, sem id nem label, e voltava do F5 como `@null`.
+      const doc = JSON.parse(JSON.stringify(editor.getJSON())) as TiptapDoc;
       // Snapshot primeiro, síncrono: se a aba fechar no próximo caractere, já foi.
       guardarRascunho(entityId, doc, base.current);
       pendente.current = doc;

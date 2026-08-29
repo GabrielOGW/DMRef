@@ -177,6 +177,10 @@
   .prose-grimorio pre code {
     @apply bg-transparent p-0;
   }
+  /* A menção é um chip, não texto: precisa ser óbvio que ali existe uma entidade. */
+  .prose-grimorio span[data-type='mention'] {
+    @apply bg-accent text-accent-foreground rounded px-1 py-0.5 font-medium;
+  }
   .prose-grimorio hr {
     @apply my-8;
   }

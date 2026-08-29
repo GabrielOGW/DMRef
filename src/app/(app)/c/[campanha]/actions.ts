@@ -31,3 +31,24 @@ export async function salvarDocumentoAction(entityId: string, content: TiptapDoc
   const salvoEm = await salvarDocumento({ ownerId: usuario.id, entityId, content });
   return salvoEm.toISOString();
 }
+
+/**
+ * Nasce a entidade que a menção acabou de inserir no texto. O id vem do cliente
+ * (UUIDv7) porque o nó já entrou com ele — esperar o servidor aqui é exatamente
+ * o que o §6.1 evita. Entidade válida é `{ nome, tipo }`, nada mais é exigido.
+ */
+export async function criarEntidadeMencionadaAction(
+  campanhaSlug: string,
+  entrada: { id: string; name: string; typeKey: string },
+) {
+  const usuario = await exigirUsuario();
+  const campanha = await buscarCampanha(usuario.id, campanhaSlug);
+  if (!campanha) throw new Error('Campanha não encontrada');
+
+  await criarEntidade({
+    campaignId: campanha.id,
+    id: entrada.id,
+    name: entrada.name,
+    typeKey: entrada.typeKey,
+  });
+}

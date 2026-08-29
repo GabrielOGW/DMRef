@@ -289,24 +289,46 @@ cascade limpa campanhas e páginas junto, então a suíte nunca deixa lixo no se
    de gravar, o que impedia o teste de esperar pelo salvamento — e impedia você de saber se o
    texto estava seguro. Estado `salvo` acrescentado.
 
-### PR 4 — a menção `@` ⭐
-
-O PR que define o projeto. Vale gastar tempo aqui.
+### PR 4 — a menção `@` ⭐  ✅ concluído
 
 ```bash
-npm i @tiptap/extension-mention uuidv7
+npm i @tiptap/extension-mention uuidv7   # 3.30.5 / 1.2.1
 ```
 
-- `src/editor/mention.ts` — `Mention` + `Suggestion` com gatilho `@`
-- Popover: lista de resultados + última linha **"Criar «X» como…"** com os tipos
-- **Cache local:** carregar todos os `{ id, name, typeKey }` da campanha na entrada e filtrar em
-  memória. `GET /api/mencoes` existe como fallback e para campanhas grandes.
-- **UUIDv7 no cliente:** o nó entra com id real na hora; o `INSERT` da entidade vai numa Server
-  Action em segundo plano.
+Entregue:
+
+- `src/editor/mention.ts` — `Mention` + `Suggestion` no `@`, e `src/editor/ListaDeMencao.tsx`,
+  o popover: resultados da campanha e, embaixo, **"Criar «X» como…"** com os tipos.
+- **Cache local** — a página da entidade carrega `{ id, name, typeKey }` da campanha inteira e o
+  filtro é em memória, sem rede no meio da digitação.
+- **UUIDv7 no cliente** — o nó entra com o id definitivo e o `INSERT` vai em segundo plano. A
+  entidade recém-nascida entra no cache na hora, então mencioná-la de novo na frase seguinte
+  acha em vez de oferecer criar de novo (tem teste).
+- `criarEntidadeMencionadaAction` e `listarTiposDeEntidade`; `criarEntidade` aceita id do cliente.
+
+Decisões e desvios:
+
+1. **`GET /api/mencoes` não existe.** O plano já o chamava de fallback; com o cache local ele não
+   tem chamador. Entra quando existir uma campanha grande o bastante para provar que precisa.
+2. **Os atributos do nó são declarados à mão.** A extensão da biblioteca traz um terceiro
+   (`mentionSuggestionChar`), e herdar via `this.parent()` deixava o nó sem atributo nenhum no
+   `getJSON()`. Declarados explicitamente, o documento fica exatamente
+   `{ type: 'mention', attrs: { id, label } }` — a forma que o invariante 1 exige e que o
+   `extract.ts` do PR 5 vai percorrer.
+3. **Sem espaço no gatilho** (padrão do Tiptap): `@Lady_Morgana`, como o próprio README já
+   escrevia. Atalho de letra para escolher o tipo ficou de fora — seta e Enter bastam.
+4. **Sem `tippy`**: o `Suggestion` do Tiptap 3 já posiciona o popover (`props.mount`).
+
+**O defeito que só o e2e acharia:** a menção chegava ao banco como `{ type: 'mention' }`, sem id
+nem label, e voltava do F5 como `@null`. O cliente enviava certo; o servidor recebia sem. Causa:
+**os `attrs` do ProseMirror são objetos sem protótipo** (`Object.create(null)`), e o serializador
+das Server Actions os descarta **em silêncio** — sem erro, sem aviso. Uma volta pelo JSON no
+`onUpdate` resolve, e o comentário no código explica por que ela está lá.
 
 **Pronto quando:** digitando `@Roderick` num texto novo, você cria o NPC e continua a frase
-**sem tirar a mão do teclado e sem esperar carregamento visível.** Meça: popover aberto em
-< 50 ms.
+**sem tirar a mão do teclado e sem esperar carregamento visível.** ✅ Coberto por
+`e2e/mencao.spec.ts` (cria e segue a frase; guarda id e não nome; reaproveita a entidade na
+segunda menção). O orçamento de < 50 ms não foi medido — o filtro é em memória, sem rede.
 
 ### PR 5 — derivação e backlinks
 

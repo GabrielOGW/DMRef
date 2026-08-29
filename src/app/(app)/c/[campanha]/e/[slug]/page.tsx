@@ -2,10 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { exigirUsuario } from '@/auth';
-import { buscarEntidade } from '@/domain/entities';
+import { buscarEntidade, listarEntidades, listarTiposDeEntidade } from '@/domain/entities';
 import { Editor } from '@/editor/Editor';
 
-import { salvarDocumentoAction } from '../../actions.ts';
+import { criarEntidadeMencionadaAction, salvarDocumentoAction } from '../../actions.ts';
 
 // Uma rota para toda entidade: o tipo escolhe quais painéis renderizam, não qual
 // arquivo existe (ARQUITETURA.md §8).
@@ -17,9 +17,21 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
   if (!linha) notFound();
   const { entidade, campanha } = linha;
 
+  // A campanha inteira de uma vez: o `@` filtra em memória, sem rede no meio da
+  // digitação (ARQUITETURA.md §6.1).
+  const [mencionaveis, tipos] = await Promise.all([
+    listarEntidades(campanha.id),
+    listarTiposDeEntidade(campanha.id),
+  ]);
+
   async function salvar(content: Parameters<typeof salvarDocumentoAction>[1]) {
     'use server';
     return salvarDocumentoAction(entidade.id, content);
+  }
+
+  async function criarMencionada(entrada: Parameters<typeof criarEntidadeMencionadaAction>[1]) {
+    'use server';
+    return criarEntidadeMencionadaAction(campanha.slug, entrada);
   }
 
   return (
@@ -35,6 +47,9 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
         conteudo={entidade.content}
         salvoEm={entidade.updatedAt.toISOString()}
         salvar={salvar}
+        mencionaveis={mencionaveis.map(({ id, name, typeKey }) => ({ id, name, typeKey }))}
+        tipos={tipos}
+        criarMencionada={criarMencionada}
       />
     </main>
   );

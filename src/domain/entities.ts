@@ -1,7 +1,7 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { campaigns, entities } from '@/db/schema';
+import { campaigns, entities, entityTypes } from '@/db/schema';
 
 import { inserirComSlugUnico } from './slug.ts';
 
@@ -47,13 +47,19 @@ export async function buscarEntidade(ownerId: string, campanhaSlug: string, enti
  * Entidade válida é `{ name, type }` — nada mais é exigido (invariante 4).
  * `id` no cliente é do PR 4; aqui o servidor gera.
  */
-export async function criarEntidade(input: { campaignId: string; name: string; typeKey?: string }) {
+export async function criarEntidade(input: {
+  campaignId: string;
+  name: string;
+  typeKey?: string;
+  /** UUIDv7 vindo do cliente quando a entidade nasce de uma menção — ARQUITETURA.md §6.1. */
+  id?: string;
+}) {
   const name = input.name.trim();
   return inserirComSlugUnico(name, async (slug) => {
     const [entidade] = await db
       .insert(entities)
       .values({
-        id: crypto.randomUUID(),
+        id: input.id ?? crypto.randomUUID(),
         campaignId: input.campaignId,
         typeKey: input.typeKey ?? 'nota',
         name,
@@ -63,4 +69,13 @@ export async function criarEntidade(input: { campaignId: string; name: string; t
       .returning();
     return entidade;
   });
+}
+
+/** Tipos globais mais os da campanha. São dados, não enum (invariante 5). */
+export function listarTiposDeEntidade(campaignId: string) {
+  return db
+    .select({ key: entityTypes.key, label: entityTypes.label })
+    .from(entityTypes)
+    .where(or(isNull(entityTypes.campaignId), eq(entityTypes.campaignId, campaignId)))
+    .orderBy(asc(entityTypes.label));
 }

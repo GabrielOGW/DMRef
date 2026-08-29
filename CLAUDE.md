@@ -9,10 +9,9 @@ repository.
 structure is *derived from writing*, never entered in forms. The GM writes the session notes;
 the system extracts who appeared, where, and what happened.
 
-**Status: PR 3 in review** — scaffold, schema + migrations + seed, GitHub auth, campaigns, and
-the Tiptap editor with autosave and a `localStorage` draft. Still unproven in a browser as a
-logged-in user: the GitHub OAuth App does not exist yet, so `GITHUB_CLIENT_ID`/`SECRET` are
-placeholders. Next up: PR 4, the `@` mention — the PR that defines the project.
+**Status: PR 4 in review** — scaffold, schema, GitHub auth, campaigns, the Tiptap editor with
+autosave and a `localStorage` draft, and the `@` mention with create-on-the-spot. Next up: PR 5
+(derivation + backlinks) in docs/FASE-0.md.
 
 Read before working here:
 
@@ -115,6 +114,10 @@ conventions.
   fixture gives one throwaway user per test and deletes it afterwards — the delete cascades, so
   a test never leaves rows in your database. It must stay `next dev`: in production Better Auth
   requires a `__Secure-` cookie, which will not travel over plain http.
+- **Server Action payloads must be plain.** `editor.getJSON()` hands back ProseMirror's `attrs`
+  objects, which are `Object.create(null)`, and the Flight serializer drops them **silently** —
+  no error, no warning. The editor round-trips the document through JSON before sending. Anything
+  else crossing that boundary deserves the same suspicion.
 - **Drafts:** `src/editor/rascunho.ts` snapshots the document to `localStorage` on every change
   and clears it only when the server confirms the save. The snapshot carries the `updatedAt` it
   was born from, never a timestamp — never compare the browser clock to the database's.
