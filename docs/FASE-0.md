@@ -422,6 +422,33 @@ página. ✅ `e2e/paleta.spec.ts`, com a paleta aberta de dentro de outra págin
 
 ---
 
+## PR 8 — consertar o que se errou escrevendo  ✅ concluído
+
+Fora do plano original, e de propósito. O plano manda parar depois do PR 7 e mestrar, mas três
+buracos não eram adiamento deliberado: **renomear, trocar o tipo e arquivar não existiam.** Você
+digita `@Roderik` no meio da frase, a entidade nasce com a letra faltando, e não havia como
+consertar — a campanha acumularia lixo e o app passaria a punir quem escreve rápido, que é o
+oposto do que ele promete.
+
+São a resposta antecipada da quarta pergunta ("o que você tentou fazer e o app não deixou?"). Essa
+pergunta existe para descobrir o que não dá para prever; estes três dava.
+
+- `renomearEntidade`, `mudarTipoDaEntidade`, `arquivarEntidade`, `desarquivarEntidade` — todos com
+  a posse dentro do `WHERE`, por `EXISTS` sobre `campaigns`.
+- `src/editor/rotulos.ts` (+5 casos) — **e este é o ponto.** O §6.4 promete que renomear é um
+  `UPDATE` de uma linha "porque o `label` do nó é cache revalidado na renderização". A
+  revalidação não existia, então renomear deixaria "@Morgana" congelado em todo texto antigo e a
+  promessa seria falsa. O mapa `id → nome` já vinha carregado para o autocomplete do `@`; agora
+  ele também conserta os rótulos na leitura.
+- A gaveta de edição é um `<details>` nativo, sem JS de cliente: escrever vem primeiro e o
+  conserto é raro.
+- **O slug não muda ao renomear** — ele é o endereço, e renomear não pode quebrar link.
+- Arquivar não apaga (invariante 8): some das listas e do `Ctrl+K`, a página segue alcançável
+  pela URL, e é de lá que se desarquiva.
+
+`e2e/consertos.spec.ts` prova os três, inclusive o que mais importa: renomear na página da
+Morgana muda o rótulo dentro da sessão escrita antes, **sem reescrever o texto**.
+
 ## Estado em 2026-08-29: os sete PRs estão de pé
 
 Tudo o que a Fase 0 listou existe e tem teste: 28 casos de unidade e 14 e2e (`npm test`,

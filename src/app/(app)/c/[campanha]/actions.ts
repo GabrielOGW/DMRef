@@ -5,7 +5,13 @@ import { redirect } from 'next/navigation';
 import { exigirUsuario } from '@/auth';
 import { buscarCampanha } from '@/domain/campaigns';
 import { salvarDocumento } from '@/domain/documents';
-import { criarEntidade } from '@/domain/entities';
+import {
+  arquivarEntidade,
+  criarEntidade,
+  desarquivarEntidade,
+  mudarTipoDaEntidade,
+  renomearEntidade,
+} from '@/domain/entities';
 import { criarSessao } from '@/domain/sessions';
 import type { TiptapDoc } from '@/db/schema';
 
@@ -63,4 +69,35 @@ export async function criarEntidadeMencionadaAction(
     name: entrada.name,
     typeKey: entrada.typeKey,
   });
+}
+
+/**
+ * Consertar o que se errou escrevendo rápido: renomear, trocar o tipo, arquivar.
+ * Um formulário só, porque na prática é um gesto só — "esta página está errada".
+ *
+ * Redireciona em vez de revalidar: navegação nova remonta o editor com props
+ * limpas, em vez de trocá-las por baixo de quem talvez esteja digitando.
+ */
+export async function editarEntidadeAction(dados: FormData) {
+  const usuario = await exigirUsuario();
+  const campanhaSlug = String(dados.get('campanha') ?? '');
+  const entityId = String(dados.get('entityId') ?? '');
+  const acao = String(dados.get('acao') ?? 'salvar');
+
+  if (acao === 'arquivar') {
+    await arquivarEntidade(usuario.id, entityId);
+    redirect(`/c/${campanhaSlug}`);
+  }
+
+  if (acao === 'desarquivar') {
+    const { slug } = await desarquivarEntidade(usuario.id, entityId);
+    redirect(`/c/${campanhaSlug}/e/${slug}`);
+  }
+
+  const nome = String(dados.get('name') ?? '').trim();
+  const typeKey = String(dados.get('typeKey') ?? '');
+  if (nome) await renomearEntidade(usuario.id, entityId, nome);
+  if (typeKey) await mudarTipoDaEntidade(usuario.id, entityId, typeKey);
+
+  redirect(`/c/${campanhaSlug}/e/${String(dados.get('slug') ?? '')}`);
 }
