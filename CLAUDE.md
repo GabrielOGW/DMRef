@@ -73,7 +73,8 @@ which panels render, not which file exists.
 ## Commands
 
 `dev` (port 3100) · `build` · `start` · `lint` · `typecheck` · `test` (Vitest,
-`--passWithNoTests`) · `db:generate` · `db:migrate` · `db:studio` · `seed`.
+`--passWithNoTests`) · `test:e2e` (Playwright) · `db:generate` · `db:migrate` · `db:studio` ·
+`seed`.
 
 The drizzle-kit scripts need no env prefix: `drizzle.config.ts` loads `.env.local` itself via
 `process.loadEnvFile`. `seed` relies on Node 24 native type stripping — no tsx, no ts-node.
@@ -106,6 +107,14 @@ conventions.
   without diffing.
 - **`session` vs `sessions`:** the singular table is a login session (the name Better Auth's
   adapter looks for — never rename it); the plural is a table session. Same file.
+- **E2E:** `e2e/` is Playwright's (`test:e2e`), `src/**/*.test.ts` is Vitest's — same suffix,
+  different runners, and `vitest.config.mts` excludes `e2e/`. Playwright runs `next dev` on
+  **3101**, never 3100, so a suite never fights the server you left open. The GitHub handshake
+  cannot be automated, so `e2e/apoio.ts` plants a `user` + `session` row and signs the cookie
+  the way better-call does (HMAC-SHA256, `token.signature`, percent-encoded); the `usuario`
+  fixture gives one throwaway user per test and deletes it afterwards — the delete cascades, so
+  a test never leaves rows in your database. It must stay `next dev`: in production Better Auth
+  requires a `__Secure-` cookie, which will not travel over plain http.
 - **Drafts:** `src/editor/rascunho.ts` snapshots the document to `localStorage` on every change
   and clears it only when the server confirms the save. The snapshot carries the `updatedAt` it
   was born from, never a timestamp — never compare the browser clock to the database's.
