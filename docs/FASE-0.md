@@ -218,21 +218,58 @@ Better Auth moram no `.env.local` — o `.env` é reescrito inteiro pelo `vercel
 **Pronto quando:** você entra com GitHub, cria a campanha "Sombras de Valoria" e ela aparece na
 lista após um F5. ✅ **Feito em 2026-08-29:** login pelo GitHub, campanha e página criadas.
 
-### PR 3 — editor e salvamento
+### PR 3 — editor e salvamento  ✅ concluído
 
 ```bash
-npm i @tiptap/react @tiptap/pm @tiptap/starter-kit \
-      @tiptap/extension-placeholder @tiptap/extension-task-list @tiptap/extension-task-item
+npm i @tiptap/react @tiptap/pm @tiptap/core @tiptap/starter-kit       @tiptap/extension-placeholder @tiptap/extension-list   # 3.30.5
 ```
 
-- `src/editor/Editor.tsx` — Tiptap controlado, sem menção ainda
-- `domain/documents.ts` — `salvarDocumento()` (sem derivação por enquanto)
-- Autosave: debounce 1,5 s **+ snapshot em `localStorage` a cada alteração + recuperação na
-  abertura**. Isto é do PR 3, não "depois" — é o risco R2.
-- Página de entidade em `c/[campanha]/e/[slug]`, renderizando o corpo
+O plano pedia `extension-task-list` e `extension-task-item`; no Tiptap 3 os dois vivem dentro de
+`@tiptap/extension-list`, e as listas comuns já vêm no StarterKit.
+
+Entregue:
+
+- `src/editor/Editor.tsx` — Tiptap controlado, `immediatelyRender: false` (sem isso o SSR do
+  Next quebra a hidratação), StarterKit + TaskList/TaskItem + Placeholder. Sem menção ainda.
+- `src/editor/rascunho.ts` (+ 6 casos no Vitest) — o snapshot em `localStorage`.
+- `domain/documents.ts` — `salvarDocumento()`, ainda sem derivação.
+- `domain/entities.ts` — criar, listar e buscar por slug. `domain/slug.ts` ganhou
+  `inserirComSlugUnico()`, que as campanhas passaram a usar também.
+- `c/[campanha]/e/[slug]` — a rota única de entidade, renderizando o corpo.
+- Criação de página na tela da campanha, para haver o que abrir antes do `@` do PR 4.
+
+Decisões tomadas aqui:
+
+1. **O rascunho local guarda a versão de origem, não um horário.** O snapshot leva o `updatedAt`
+   que o servidor devolveu quando o editor abriu, e só é recuperado se o servidor ainda estiver
+   nessa versão. Comparar o `Date.now()` do navegador com o `now()` do Postgres descartaria
+   rascunho válido em qualquer máquina com o relógio atrasado — perda silenciosa de texto, que é
+   exatamente o que o R2 manda evitar.
+2. **O rascunho só é apagado quando o servidor confirma.** Falha de rede deixa o texto no
+   navegador, e a barra de status diz isso.
+3. **`TiptapDoc` virou `JSONContent & { type: 'doc' }`** — era um placeholder com `unknown[]` no
+   PR 1. Custou declarar `@tiptap/core` como dependência.
+4. **A posse vai no `WHERE` do `UPDATE`**, por `EXISTS` sobre `campaigns`: uma ida ao banco, e id
+   de entidade alheia simplesmente não casa.
+5. **Tipografia do editor escrita à mão** em `globals.css` — quinze linhas contra a dependência
+   `@tailwindcss/typography`, e é o único lugar do app que precisa dela.
+6. **`vitest.config.mts`** passou a existir só pelo alias `@/`: até aqui os testes só importavam
+   tipo, que o esbuild apaga sem resolver.
+
+Achado de tabela: **o `shadcn init` deixou `--font-sans: var(--font-sans)`** no `@theme`, uma
+auto-referência que fazia o app inteiro renderizar em Times New Roman desde o PR 0. Corrigido
+para `var(--font-geist-sans)`.
+
+**Verificado:** `typecheck`, `lint`, `test` (13 casos) e `build` passam. Prova ponta a ponta
+contra o Neon, com usuário/campanha/entidade descartáveis: o corpo grava e volta igual, a FTS
+acha "floresta negra" **dentro do JSON do Tiptap**, um segundo dono não lê nem escreve a mesma
+entidade, e a segunda campanha de mesmo nome vira `sombras-de-valoria-2`. No navegador, numa
+página de prova temporária cujo salvamento falhava de propósito: parágrafo digitado → snapshot
+no `localStorage` → recarga → texto de volta, com o aviso "Rascunho local recuperado".
 
 **Pronto quando:** você escreve um parágrafo, fecha a aba no meio da digitação, reabre e o texto
-está lá. Teste isso de verdade, com a aba fechada mesmo.
+está lá. Teste isso de verdade, com a aba fechada mesmo. **Falta você fazer isso** — depende do
+login, que depende do GitHub OAuth App do PR 2.
 
 ### PR 4 — a menção `@` ⭐
 

@@ -3,7 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { campaigns } from '@/db/schema';
 
-import { slugify } from './slug.ts';
+import { inserirComSlugUnico } from './slug.ts';
 
 export type Campanha = typeof campaigns.$inferSelect;
 
@@ -24,30 +24,21 @@ export async function buscarCampanha(ownerId: string, slug: string) {
   return campanha;
 }
 
-/**
- * O slug é único por dono (campaigns_owner_slug_idx). Em vez de consultar antes
- * e correr o risco da corrida, tentamos inserir e deixamos o índice decidir.
- *
- * ponytail: até 5 tentativas sequenciais; se alguém tiver seis campanhas com o
- * mesmo nome, sufixo aleatório resolve — trocar só quando acontecer.
- */
+/** O slug é único por dono (campaigns_owner_slug_idx). */
 export async function criarCampanha(input: { ownerId: string; name: string; system?: string }) {
   const name = input.name.trim();
-  const base = slugify(name) || 'campanha';
-
-  for (let n = 1; n <= 5; n++) {
+  return inserirComSlugUnico(name, async (slug) => {
     const [campanha] = await db
       .insert(campaigns)
       .values({
         id: crypto.randomUUID(),
         ownerId: input.ownerId,
         name,
-        slug: n === 1 ? base : `${base}-${n}`,
+        slug,
         system: input.system?.trim() || null,
       })
       .onConflictDoNothing()
       .returning();
-    if (campanha) return campanha;
-  }
-  throw new Error(`Não consegui um slug livre a partir de "${base}"`);
+    return campanha;
+  });
 }

@@ -9,10 +9,10 @@ repository.
 structure is *derived from writing*, never entered in forms. The GM writes the session notes;
 the system extracts who appeared, where, and what happened.
 
-**Status: PR 2 in review** — scaffold, full schema + migrations + seed, GitHub auth and
-campaigns (create, list, open). Auth is code-complete but unproven end to end: the GitHub OAuth
-App does not exist yet, so `GITHUB_CLIENT_ID`/`SECRET` are placeholders. Next up: PR 3 (Tiptap
-editor + autosave) in docs/FASE-0.md.
+**Status: PR 3 in review** — scaffold, schema + migrations + seed, GitHub auth, campaigns, and
+the Tiptap editor with autosave and a `localStorage` draft. Still unproven in a browser as a
+logged-in user: the GitHub OAuth App does not exist yet, so `GITHUB_CLIENT_ID`/`SECRET` are
+placeholders. Next up: PR 4, the `@` mention — the PR that defines the project.
 
 Read before working here:
 
@@ -106,6 +106,9 @@ conventions.
   without diffing.
 - **`session` vs `sessions`:** the singular table is a login session (the name Better Auth's
   adapter looks for — never rename it); the plural is a table session. Same file.
+- **Drafts:** `src/editor/rascunho.ts` snapshots the document to `localStorage` on every change
+  and clears it only when the server confirms the save. The snapshot carries the `updatedAt` it
+  was born from, never a timestamp — never compare the browser clock to the database's.
 - **Column casing:** declare columns in camelCase and let Drizzle map to snake_case
   (`casing: 'snake_case'`, set in both `drizzle.config.ts` and `src/db/index.ts`). Never name
   columns by hand — the two configs must stay in sync.
