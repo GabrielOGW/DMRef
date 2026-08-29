@@ -6,6 +6,7 @@ import { exigirUsuario } from '@/auth';
 import { buscarCampanha } from '@/domain/campaigns';
 import { salvarDocumento } from '@/domain/documents';
 import { criarEntidade } from '@/domain/entities';
+import { criarSessao } from '@/domain/sessions';
 import type { TiptapDoc } from '@/db/schema';
 
 export async function criarEntidadeAction(_estado: string | null, dados: FormData) {
@@ -30,6 +31,17 @@ export async function salvarDocumentoAction(entityId: string, content: TiptapDoc
   const usuario = await exigirUsuario();
   const salvoEm = await salvarDocumento({ ownerId: usuario.id, entityId, content });
   return salvoEm.toISOString();
+}
+
+/** Abre a sessão seguinte da campanha e cai direto no editor, com o corpo em foco. */
+export async function criarSessaoAction(dados: FormData) {
+  const usuario = await exigirUsuario();
+  const campanhaSlug = String(dados.get('campanha') ?? '');
+  const campanha = await buscarCampanha(usuario.id, campanhaSlug);
+  if (!campanha) throw new Error('Campanha não encontrada');
+
+  const sessao = await criarSessao(campanha.id);
+  redirect(`/c/${campanha.slug}/e/${sessao.slug}`);
 }
 
 /**

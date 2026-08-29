@@ -25,6 +25,9 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
     listarTiposDeEntidade(campanha.id),
     backlinks(entidade.id),
   ]);
+  // A consulta já vem ordenada por número de sessão; aqui só se separa em duas listas.
+  const historico = aparicoes.filter((a) => a.sessao !== null);
+  const avulsas = aparicoes.filter((a) => a.sessao === null);
 
   async function salvar(content: Parameters<typeof salvarDocumentoAction>[1]) {
     'use server';
@@ -56,31 +59,53 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
 
       {/* Derivado do texto dos outros, nunca digitado aqui (invariante 2). A lista
           é do carregamento da página: salvar não revalida a rota, senão o editor
-          receberia props novas no meio da digitação. */}
-      <section className="mt-16 border-t pt-6">
-        <h2 className="text-sm font-semibold tracking-tight">Onde aparece</h2>
+          receberia props novas no meio da digitação.
+
+          Mesma tabela, duas apresentações (§6.3): o que veio de sessão é
+          Histórico, na ordem da ficção; o resto é Aparece em. */}
+      <section className="mt-16 space-y-8 border-t pt-6">
+        {historico.length > 0 ? (
+          <Aparicoes titulo="Histórico" itens={historico} campanha={campanha.slug} />
+        ) : null}
+        {avulsas.length > 0 ? (
+          <Aparicoes titulo="Aparece em" itens={avulsas} campanha={campanha.slug} />
+        ) : null}
         {aparicoes.length === 0 ? (
-          <p className="text-muted-foreground mt-2 text-sm">
-            Ninguém mencionou esta página ainda. Escreva <code>@{entidade.name}</code> em outro
-            texto e ela aparece aqui.
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {aparicoes.map((aparicao) => (
-              <li key={`${aparicao.id}-${aparicao.pos}`} className="text-sm">
-                <Link
-                  href={`/c/${campanha.slug}/e/${aparicao.slug}`}
-                  className="font-medium hover:underline"
-                >
-                  {aparicao.sessao !== null ? `Sessão ${aparicao.sessao} · ` : null}
-                  {aparicao.name}
-                </Link>
-                <p className="text-muted-foreground mt-0.5">{aparicao.context}</p>
-              </li>
-            ))}
-          </ul>
-        )}
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight">Onde aparece</h2>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Ninguém mencionou esta página ainda. Escreva <code>@{entidade.name}</code> em outro
+              texto e ela aparece aqui.
+            </p>
+          </div>
+        ) : null}
       </section>
     </main>
+  );
+}
+
+function Aparicoes({
+  titulo,
+  itens,
+  campanha,
+}: {
+  titulo: string;
+  itens: Awaited<ReturnType<typeof backlinks>>;
+  campanha: string;
+}) {
+  return (
+    <div>
+      <h2 className="text-sm font-semibold tracking-tight">{titulo}</h2>
+      <ul className="mt-3 space-y-3">
+        {itens.map((aparicao) => (
+          <li key={`${aparicao.id}-${aparicao.pos}`} className="text-sm">
+            <Link href={`/c/${campanha}/e/${aparicao.slug}`} className="font-medium hover:underline">
+              {aparicao.name}
+            </Link>
+            <p className="text-muted-foreground mt-0.5">{aparicao.context}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

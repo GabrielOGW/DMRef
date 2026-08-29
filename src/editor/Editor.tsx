@@ -75,6 +75,8 @@ export function Editor({
   const editor = useEditor({
     // Sem isto o Tiptap renderiza no servidor e a hidratação quebra.
     immediatelyRender: false,
+    // Abrir uma página é abrir para escrever: o cursor já está no fim do corpo.
+    autofocus: 'end',
     extensions: [
       StarterKit,
       TaskList,

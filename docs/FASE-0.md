@@ -365,15 +365,29 @@ página nova pelo botão de criar faz uma **segunda** Morgana. Era erro do teste
 oferecia a que já existia — mas mostrou que a diferença entre reaproveitar e duplicar está a uma
 tecla de distância. O teste agora exige uma Morgana só na campanha.
 
-### PR 6 — sessões
+### PR 6 — sessões  ✅ concluído
 
-- Extensão `sessions` em uso: número (auto-incremento por campanha), data real, ato ainda nulo
-- Criar sessão a partir da campanha, com o corpo já em foco no editor
-- Lista de sessões
-- Backlinks vindos de sessões agrupados como **Histórico**, ordenados por `s.number` (§6.3)
+- `domain/sessions.ts` — `criarSessao()` numera pelo próximo da campanha e grava entidade e linha
+  da extensão **no mesmo lote**: entidade sem a linha seria uma sessão sem número. `playedAt` é a
+  data real; `actId` fica nulo até a fase 1.
+- Seção "Sessões" na campanha, com o botão que abre a próxima; a lista de páginas passou a
+  excluir sessões, que agora têm lugar próprio. O cache de menção continua com tudo — dá para
+  mencionar uma sessão.
+- "Onde aparece" virou duas apresentações da mesma tabela (§6.3): **Histórico** para o que veio
+  de sessão, na ordem da ficção, e **Aparece em** para o resto.
+- O editor abre com `autofocus: 'end'`. Vale para toda página, não só para sessão: abrir uma
+  página é abrir para escrever.
+
+Decisão: **o número é do índice único, não do `max()` lido.** `criarSessao` relê e repete até
+três vezes, e na última o erro sobe — engolir três exceções seria esconder outra coisa.
 
 **Pronto quando:** a página da Lady Morgana mostra "Sessão 01 / Sessão 03 / Sessão 05" nessa
-ordem, e não em ordem de edição.
+ordem, e não em ordem de edição. ✅ É o segundo teste de `e2e/sessoes.spec.ts`, que menciona a
+Morgana na 05, na 01 e na 03 — nessa ordem — e exige a lista ordenada por número.
+
+O agrupamento quebrou os dois testes do PR 5, que procuravam o título "Onde aparece". Foi o
+sinal certo na hora certa: eles agora localizam a seção em si, e as páginas de apoio deixaram de
+se chamar "Sessão", que era o que confundia.
 
 ### PR 7 — `Ctrl+K`
 

@@ -45,19 +45,20 @@ async function escrever(
   await expect(page.getByText('Salvo', { exact: true })).toBeVisible({ timeout: 15_000 });
 }
 
-const ondeAparece = (page: Page) =>
-  page.locator('section', { has: page.getByRole('heading', { name: 'Onde aparece' }) });
+// A seção mudou de forma no PR 6: agora são dois títulos ("Histórico" e "Aparece
+// em"), e "Onde aparece" só sobra no estado vazio. O localizador é a seção em si.
+const ondeAparece = (page: Page) => page.locator('main > section');
 
 test('mencionar em dois textos põe os dois na página da entidade', async ({ page, usuario }) => {
   expect(usuario).toBeTruthy();
   const campanha = await criarCampanha(page);
 
-  const sessao1 = await criarPagina(page, campanha, 'Sessão 01');
+  const sessao1 = await criarPagina(page, campanha, 'Nota 01');
   await escrever(page, 'O grupo encontrou ', 'Morgana', 'na taverna.');
   const morgana = page.locator('.ProseMirror span[data-type="mention"]');
   await expect(morgana).toHaveText('@Morgana');
 
-  const sessao2 = await criarPagina(page, campanha, 'Sessão 02');
+  const sessao2 = await criarPagina(page, campanha, 'Nota 02');
   // Numa página nova, com o cache recarregado do servidor: tem que reaproveitar
   // a entidade, não criar uma segunda Morgana.
   await escrever(page, 'De novo ', 'Morgana', 'agora na floresta.', { criar: false });
@@ -69,8 +70,8 @@ test('mencionar em dois textos põe os dois na página da entidade', async ({ pa
   await expect(page.getByRole('heading', { name: 'Morgana' })).toBeVisible();
 
   const secao = ondeAparece(page);
-  await expect(secao.getByRole('link', { name: 'Sessão 01' })).toBeVisible();
-  await expect(secao.getByRole('link', { name: 'Sessão 02' })).toBeVisible();
+  await expect(secao.getByRole('link', { name: 'Nota 01' })).toBeVisible();
+  await expect(secao.getByRole('link', { name: 'Nota 02' })).toBeVisible();
   // O contexto vem congelado da derivação, com o texto ao redor.
   await expect(secao).toContainText('O grupo encontrou @Morgana na taverna.');
   await expect(secao).toContainText('De novo @Morgana agora na floresta.');
@@ -82,16 +83,16 @@ test('apagar a menção do texto tira a linha no salvamento seguinte', async ({ 
   expect(usuario).toBeTruthy();
   const campanha = await criarCampanha(page);
 
-  await criarPagina(page, campanha, 'Sessão 01');
+  await criarPagina(page, campanha, 'Nota 01');
   await escrever(page, 'Vi ', 'Roderick', 'ontem.');
 
   await page.goto(campanha);
   await page.getByRole('link', { name: /Roderick/ }).click();
-  await expect(ondeAparece(page).getByRole('link', { name: 'Sessão 01' })).toBeVisible();
+  await expect(ondeAparece(page).getByRole('link', { name: 'Nota 01' })).toBeVisible();
 
   // Volta na sessão e apaga tudo.
   await page.goto(campanha);
-  await page.getByRole('link', { name: /Sessão 01/ }).click();
+  await page.getByRole('link', { name: /Nota 01/ }).click();
   const editor = page.locator('.ProseMirror');
   await editor.click();
   await page.keyboard.press('ControlOrMeta+a');
@@ -100,6 +101,6 @@ test('apagar a menção do texto tira a linha no salvamento seguinte', async ({ 
 
   await page.goto(campanha);
   await page.getByRole('link', { name: /Roderick/ }).click();
-  await expect(ondeAparece(page).getByRole('link', { name: 'Sessão 01' })).toBeHidden();
+  await expect(ondeAparece(page).getByRole('link', { name: 'Nota 01' })).toBeHidden();
   await expect(ondeAparece(page)).toContainText('Ninguém mencionou esta página ainda');
 });
