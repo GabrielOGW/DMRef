@@ -294,6 +294,11 @@ export const account = pgTable(
   'account',
   {
     id: text().primaryKey(),
+    // A CLI do Better Auth NÃO gera esta coluna nem o índice único abaixo, mas o
+    // runtime da 1.7 exige as duas: a identidade da conta passou a ser
+    // (issuer, accountId), e sem elas o callback do OAuth morre em 500. Não
+    // apague ao regerar o schema.
+    issuer: text().notNull(),
     accountId: text().notNull(),
     providerId: text().notNull(),
     userId: text()
@@ -311,7 +316,10 @@ export const account = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (t) => [index('account_userId_idx').on(t.userId)],
+  (t) => [
+    index('account_userId_idx').on(t.userId),
+    uniqueIndex('account_issuer_account_id_idx').on(t.issuer, t.accountId),
+  ],
 );
 
 export const verification = pgTable(
