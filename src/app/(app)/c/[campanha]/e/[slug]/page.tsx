@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { exigirUsuario } from '@/auth';
 import { buscarEntidade, listarEntidades, listarTiposDeEntidade } from '@/domain/entities';
+import { backlinks } from '@/domain/mentions';
 import { Editor } from '@/editor/Editor';
 
 import { criarEntidadeMencionadaAction, salvarDocumentoAction } from '../../actions.ts';
@@ -19,9 +20,10 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
 
   // A campanha inteira de uma vez: o `@` filtra em memória, sem rede no meio da
   // digitação (ARQUITETURA.md §6.1).
-  const [mencionaveis, tipos] = await Promise.all([
+  const [mencionaveis, tipos, aparicoes] = await Promise.all([
     listarEntidades(campanha.id),
     listarTiposDeEntidade(campanha.id),
+    backlinks(entidade.id),
   ]);
 
   async function salvar(content: Parameters<typeof salvarDocumentoAction>[1]) {
@@ -51,6 +53,34 @@ export default async function Entidade({ params }: PageProps<'/c/[campanha]/e/[s
         tipos={tipos}
         criarMencionada={criarMencionada}
       />
+
+      {/* Derivado do texto dos outros, nunca digitado aqui (invariante 2). A lista
+          é do carregamento da página: salvar não revalida a rota, senão o editor
+          receberia props novas no meio da digitação. */}
+      <section className="mt-16 border-t pt-6">
+        <h2 className="text-sm font-semibold tracking-tight">Onde aparece</h2>
+        {aparicoes.length === 0 ? (
+          <p className="text-muted-foreground mt-2 text-sm">
+            Ninguém mencionou esta página ainda. Escreva <code>@{entidade.name}</code> em outro
+            texto e ela aparece aqui.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {aparicoes.map((aparicao) => (
+              <li key={`${aparicao.id}-${aparicao.pos}`} className="text-sm">
+                <Link
+                  href={`/c/${campanha.slug}/e/${aparicao.slug}`}
+                  className="font-medium hover:underline"
+                >
+                  {aparicao.sessao !== null ? `Sessão ${aparicao.sessao} · ` : null}
+                  {aparicao.name}
+                </Link>
+                <p className="text-muted-foreground mt-0.5">{aparicao.context}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
