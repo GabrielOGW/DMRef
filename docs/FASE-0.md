@@ -159,16 +159,50 @@ Detalhe de execução: o `seed` roda por type stripping do Node, que é ESM e ex
 explícita no import. Por isso `src/db/index.ts` importa `./schema.ts` e o `tsconfig.json` ganhou
 `allowImportingTsExtensions`.
 
-### PR 2 — auth e campanhas
+### PR 2 — auth e campanhas  ⏳ codigo pronto, falta a credencial do GitHub
 
 ```bash
-npm i better-auth
+npm i better-auth   # 1.7.2
 ```
 
-- `src/auth.ts` com adapter Drizzle e provedor GitHub
-- Rota `(auth)/entrar` e proteção do grupo `(app)`
-- `domain/campaigns.ts`: criar, listar por dono, buscar por slug
-- Páginas: lista de campanhas e criação (um `Dialog` com nome + sistema)
+Entregue:
+
+- `src/auth.ts` — `betterAuth` com `drizzleAdapter`, provedor GitHub e o plugin `nextCookies()`
+  (último da lista, é o que deixa a Server Action gravar o cookie de sessão). Mais dois
+  helpers: `sessaoAtual()` e `exigirUsuario()`, que redireciona para `/entrar`.
+- `src/db/schema.ts` — as quatro tabelas do Better Auth (`user`, `session`, `account`,
+  `verification`), geradas por `npx @better-auth/cli generate` e coladas no schema único.
+- `src/db/migrations/0001_auth.sql` — as quatro tabelas **mais a FK
+  `campaigns.owner_id → user.id`**, que o PR 1 tinha deixado pendente de propósito.
+- `src/app/api/auth/[...all]/route.ts` — Route Handler, não action: quem chama é o GitHub.
+- `(auth)/entrar` — um botão. `(app)/layout.tsx` — o gate + cabeçalho com "Sair".
+- `domain/slug.ts` + `domain/slug.test.ts`, `domain/campaigns.ts` (criar, listar, buscar).
+- `(app)/page.tsx` — lista + `Dialog` de criação; `(app)/c/[campanha]/page.tsx` — abre a
+  campanha. A página placeholder em `src/app/page.tsx` saiu (colidia com a rota `/` do grupo).
+
+Decisões tomadas aqui:
+
+1. **Login e logout são Server Actions, não cliente.** `auth.api.signInSocial()` devolve a URL
+   do GitHub e a página faz `redirect()`. Sem `createAuthClient`, sem JS de autenticação no
+   bundle — o `authClient` entra se e quando alguma tela precisar de estado no cliente.
+2. **Os nomes de coluna que a CLI do Better Auth escreve foram apagados** do schema: com
+   `casing: 'snake_case'` o Drizzle gera exatamente os mesmos, e a convenção do repositório é
+   nunca nomear coluna à mão. As `relations()` geradas também saíram — nada usa `db.query`.
+3. **Atenção ao par `session` × `sessions`.** O singular é sessão de login (nome exigido pelo
+   adapter, não renomeie); o plural é sessão de mesa, do PR 1.
+4. **Escopo por dono vai na consulta, não no render.** `buscarCampanha(ownerId, slug)` — slug
+   de outra pessoa é 404, e toda action recomeça por `exigirUsuario()`.
+5. **Colisão de slug resolvida pelo índice único**, com até cinco tentativas de `INSERT … ON
+   CONFLICT DO NOTHING`, em vez de consultar antes e correr o risco da corrida.
+
+**Verificado:** `typecheck`, `lint`, `test` (3 casos de `slugify`) e `build` passam; a migração
+foi aplicada no Neon (13 tabelas, FK presente); com o servidor de produção de pé, `/` e
+`/c/qualquer-coisa` devolvem 307 para `/entrar` e a tela de login renderiza.
+
+**Falta para fechar:** um GitHub OAuth App (callback
+`http://localhost:3100/api/auth/callback/github`) e os dois valores em `.env.local` —
+`GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` estão com `preencher`. O `BETTER_AUTH_SECRET` já
+foi gerado.
 
 **Pronto quando:** você entra com GitHub, cria a campanha "Sombras de Valoria" e ela aparece na
 lista após um F5.

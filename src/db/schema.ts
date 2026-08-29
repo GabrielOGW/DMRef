@@ -41,9 +41,11 @@ export const campaigns = pgTable(
   'campaigns',
   {
     id: uuid().primaryKey(),
-    // Sem FK até o PR 2: quem define a tabela de usuários é o Better Auth, pela
-    // CLI dele. Adivinhar o schema aqui só criaria uma migração de conserto.
-    ownerId: text().notNull(),
+    // FK adicionada no PR 2, quando o Better Auth definiu a tabela `user`
+    // (declarada no fim deste arquivo; a referência é lazy, então a ordem não importa).
+    ownerId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
     worldId: uuid(), // null hoje; gancho para mundo compartilhado (ARQUITETURA.md §4)
     name: text().notNull(),
     slug: text().notNull(),
@@ -245,4 +247,85 @@ export const openThreads = pgTable(
     resolved: boolean().default(false).notNull(),
   },
   (t) => [index('open_threads_campaign_resolved_idx').on(t.campaignId, t.resolved)],
+);
+
+// ── auth (Better Auth) ──────────────────────────────────────────────────────
+// Estrutura ditada pelo Better Auth, gerada por `npx @better-auth/cli generate`
+// (ARQUITETURA.md §3.5: as tabelas de usuário ficam no nosso banco para o escopo
+// por dono ser JOIN). Os nomes `user`/`session`/`account`/`verification` são os
+// que o adapter procura — não renomeie. Os nomes de coluna explícitos que a CLI
+// escreve foram removidos: casing: 'snake_case' produz exatamente os mesmos.
+//
+// Atenção: `session` aqui é sessão de login. Sessão de mesa é `sessions`, acima.
+
+export const user = pgTable('user', {
+  id: text().primaryKey(),
+  name: text().notNull(),
+  email: text().notNull().unique(),
+  emailVerified: boolean().default(false).notNull(),
+  image: text(),
+  createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const session = pgTable(
+  'session',
+  {
+    id: text().primaryKey(),
+    expiresAt: timestamp().notNull(),
+    token: text().notNull().unique(),
+    createdAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    ipAddress: text(),
+    userAgent: text(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+  },
+  (t) => [index('session_userId_idx').on(t.userId)],
+);
+
+export const account = pgTable(
+  'account',
+  {
+    id: text().primaryKey(),
+    accountId: text().notNull(),
+    providerId: text().notNull(),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    accessToken: text(),
+    refreshToken: text(),
+    idToken: text(),
+    accessTokenExpiresAt: timestamp(),
+    refreshTokenExpiresAt: timestamp(),
+    scope: text(),
+    password: text(),
+    createdAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => [index('account_userId_idx').on(t.userId)],
+);
+
+export const verification = pgTable(
+  'verification',
+  {
+    id: text().primaryKey(),
+    identifier: text().notNull(),
+    value: text().notNull(),
+    expiresAt: timestamp().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => [index('verification_identifier_idx').on(t.identifier)],
 );
