@@ -116,6 +116,11 @@ conventions.
   fixture gives one throwaway user per test and deletes it afterwards — the delete cascades, so
   a test never leaves rows in your database. It must stay `next dev`: in production Better Auth
   requires a `__Secure-` cookie, which will not travel over plain http.
+- **Never let `next build` need a runtime credential.** `auth.ts` used to build the Better Auth
+  instance at module scope, so a missing env var killed the whole build instead of the request
+  that needed it — fifteen deploys failed that way before anyone noticed, because a local
+  `.env.local` made `npm run build` pass. `obterAuth()` is lazy, and `sessaoAtual()` awaits
+  `headers()` **before** touching it so the prerender marks the route dynamic first.
 - **Derived data is best-effort; the document is not.** `salvarDocumento` drops a mention whose
   target row has not landed yet rather than let a foreign key kill the body's `UPDATE` — the
   delete-and-reinsert brings it back on the next save. Never invert that trade.
