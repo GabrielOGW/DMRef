@@ -22,8 +22,10 @@ export default async function Campanha({ params }: PageProps<'/c/[campanha]'>) {
     listarEntidades(campanha.id),
     listarSessoes(campanha.id),
   ]);
-  // Sessões têm seção própria; aqui fica o resto do mundo.
-  const paginas = entidades.filter((entidade) => entidade.typeKey !== 'sessao');
+  // Sessões têm seção própria e as categorias moram na barra lateral: aqui a
+  // campanha vira o que ela devia ser, uma porta de entrada com o que foi mexido
+  // por último. `listarEntidades` já ordena por `updatedAt`.
+  const recentes = entidades.filter((e) => e.typeKey !== 'sessao').slice(0, 8);
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-12">
@@ -60,17 +62,21 @@ export default async function Campanha({ params }: PageProps<'/c/[campanha]'>) {
         )}
       </section>
 
-      <div className="mt-10 mb-6">
+      <div className="mt-10 mb-3 flex items-center justify-between gap-4">
+        <h2 className="text-sm font-semibold tracking-tight">Recentes</h2>
+      </div>
+      <div className="mb-6">
         <NovaPagina campanha={campanha.slug} />
       </div>
 
-      {paginas.length === 0 ? (
+      {recentes.length === 0 ? (
         <p className="text-muted-foreground text-sm">
-          Nenhuma página ainda. Crie uma e comece a escrever.
+          Nenhuma página ainda. Crie uma aqui, ou escreva <code>@nome</code> dentro de uma sessão —
+          a página nasce da frase.
         </p>
       ) : (
         <ul className="divide-y rounded-lg border">
-          {paginas.map((pagina) => (
+          {recentes.map((pagina) => (
             <li key={pagina.id}>
               <Link
                 href={`/c/${campanha.slug}/e/${pagina.slug}`}

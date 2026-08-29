@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { exigirUsuario } from '@/auth';
-import { buscarEntidade, listarEntidades, listarTiposDeEntidade } from '@/domain/entities';
+import { buscarEntidade, listarEntidades } from '@/domain/entities';
+import { listarTiposDeEntidade } from '@/domain/tipos';
 import { backlinks } from '@/domain/mentions';
 import { Editor } from '@/editor/Editor';
 import { revalidarRotulos } from '@/editor/rotulos';

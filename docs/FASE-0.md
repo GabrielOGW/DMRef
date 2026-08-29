@@ -449,6 +449,40 @@ pergunta existe para descobrir o que não dá para prever; estes três dava.
 `e2e/consertos.spec.ts` prova os três, inclusive o que mais importa: renomear na página da
 Morgana muda o rótulo dentro da sessão escrita antes, **sem reescrever o texto**.
 
+## PR 9 - tema do sistema e barra de categorias  ✅ concluído
+
+Pedido do autor, fora do plano. Vale registrar por que entrou mesmo com a Fase 0 mandando parar:
+nenhum dos dois é feature de domínio — são **navegação e legibilidade**, e sem eles as três
+sessões de teste seriam feitas num app pior do que o que está no papel.
+
+**Tema pelo sistema.** A paleta escura já existia no `globals.css`, presa a uma classe `.dark`
+que nada aplicava. Virou `@media (prefers-color-scheme: dark)` sem duplicar um token,
+`@custom-variant dark` aponta para a mesma media query e `:root` ganhou `color-scheme: light
+dark`. **Sem alternador de propósito** — o usuário já escolheu no sistema operacional.
+
+**Barra de categorias.** Fixas: Sessões, Personagens jogáveis, NPCs, Locais, Eventos, Notas.
+Aparecem sempre, mesmo vazias; as demais só quando têm página ou foram criadas pela campanha —
+dezessete gavetas vazias não é navegação, é ruído.
+
+1. **A lista fixa é ordem de exibição, não definição de tipo.** Continua valendo o invariante 5:
+   tipo novo é `INSERT`, sem migração e sem tocar em código.
+2. **Não existe caminho de exclusão de categoria — para nenhuma.** O pedido era que as padrão não
+   pudessem ser excluídas; o schema já garantia isso (globais têm `campaign_id NULL` e a campanha
+   só alcança as linhas dela). Não construir exclusão nenhuma é mais forte e mais barato: apagar
+   um tipo deixaria entidades apontando para uma chave que não existe mais.
+3. **Uma categoria nova usa um campo só** para `label` e `plural`: português não tem plural
+   derivável, e dois campos numa barra lateral é atrito por ganho cosmético.
+4. **Criar de dentro de uma categoria já nasce daquele tipo**, sem ninguém escolher nada.
+5. **Mutação revalida o layout**, porque layout não re-executa em navegação entre rotas irmãs. A
+   exceção deliberada é a criação vinda do `@`: ela roda enquanto se digita, e revalidar mandaria
+   props novas ao editor no meio da frase. A contagem se acerta na navegação seguinte.
+6. **A tela da campanha virou porta de entrada**: sessões, criação e as oito páginas mexidas por
+   último. Navegar por categoria agora é da barra.
+
+Custo a assumir, e é honesto dizer: **a barra é um terceiro jeito de navegar**, ao lado do
+`Ctrl+K` e do "Onde aparece". Isso mexe com a terceira pergunta do fim desta fase — ao responder
+"você lê os backlinks ou busca?", conte a barra como um terceiro caminho, e não como busca.
+
 ## Estado em 2026-08-29: os sete PRs estão de pé
 
 Tudo o que a Fase 0 listou existe e tem teste: 28 casos de unidade e 14 e2e (`npm test`,
