@@ -63,10 +63,18 @@ Quem sobe o servidor é quem mata — ver o `CLAUDE.md` da raiz do workspace.
 
 Decidido em 2026-08-28, ao conferir o ambiente. Nada disso bloqueia a Fase 0.
 
+> **2026-08-29 — quinze deploys quebrados sem ninguém notar.** Todo deploy desde o PR 2
+> falhou, e o repositório não tinha como avisar: local havia `.env.local`, então
+> `build` passava. A causa foi o `auth.ts` criar a instância no topo do módulo, o que
+> fazia uma credencial de runtime virar dependência de build (corrigido em #10).
+> A lição vale além do auth: **nada que só existe em produção pode ser exigido pelo
+> `next build`.**
+
 | # | Pendência | Decisão | Quando resolver |
 |---|---|---|---|
 | I1 | **Proteção de deployment (SSO da Vercel) ligada em todas as URLs `*.vercel.app`.** Só o dono da conta abre o site. | **Manter por enquanto** — o app é do mestre e ninguém mais precisa entrar. | **Obrigatório antes do portal do jogador** (fase 3): o portal é uma rota pública por token e não funciona sob SSO. Adiado, não cancelado. |
 | I2 | **Região das functions** deve ser `gru1` (São Paulo) para casar com o banco em `sa-east-1`. O padrão do Hobby é `iad1`, e cada consulta atravessaria o continente. | Configurado como `gru1`; não deu para confirmar pela API. | Conferir em Settings → Functions quando a primeira consulta ao banco existir (PR 2). Se estiver em `iad1`, trocar — o orçamento do `Ctrl+K` é 30 ms. |
+| I4 | **`GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` não existem na Vercel**, então `/entrar` responde 500 em produção. O build já não depende delas (PR #10). | Adicionar o callback de produção ao **mesmo** OAuth App — o GitHub aceita até 10 redirect URIs, não precisa de app novo — e cadastrar o par na Vercel. | Antes da primeira sessão mestrada em produção. Rodando local na 3100, nada disso bloqueia. |
 | I3 | **Nome do projeto.** O repositório é `DMRef`; o produto ainda se chama Grimório (pasta local, `package.json`, título). | Segue como Grimório até decisão contrária — repositório é endereço, não marca. | A qualquer momento; quanto antes, menos lugares. |
 
 ---
@@ -428,14 +436,49 @@ mesmo é com você.
 
 Mestre três sessões. Anote no próprio app o que atrapalhou.
 
-Perguntas a responder com uso real, antes de qualquer código da Fase 1:
+As quatro perguntas abaixo estavam escritas de um jeito que exigia introspecção
+("o `@` interrompe o pensamento?"), e ninguém sabe responder isso honestamente
+depois do fato. Reescritas em **coisa observável, com a decisão que ela dispara** —
+porque pergunta sem consequência não vale o tempo de responder.
 
-- O `@` interrompe o pensamento ou desaparece no fluxo?
-- Criar entidade na hora funciona, ou você acaba criando tudo depois?
-- Os backlinks são consultados de verdade, ou você navega por busca?
-- O que você tentou fazer e o app não deixou?
+### 1. O `@` cabe no meio da frase?
 
-**A resposta a essas quatro perguntas vale mais que este documento inteiro.**
+**O que olhar, durante:** quantas vezes você **parou de escrever** para lidar com o
+popover — apagar e redigitar o nome, escolher o tipo errado, fechar no `Esc` e
+continuar sem a menção.
+
+- Zero ou uma vez por sessão → o `@` está no lugar. Nada muda.
+- Mais que isso → **a criação sai do meio da frase.** O `@` passa a inserir a
+  menção com o nome digitado e mais nada; escolher o tipo vira tarefa de depois,
+  numa fila de "sem tipo" na campanha.
+
+### 2. Criar na hora produz página ou lixo?
+
+**O que olhar, depois:** na lista da campanha, quantas páginas têm o corpo vazio.
+
+- A maioria com corpo → a criação-na-hora funciona: você volta e escreve nelas.
+- A maioria vazia → ela está fabricando entulho. **Entidade sem corpo deixa de ser
+  linha no banco** e passa a ser só um nome dentro do texto, promovida a página no
+  dia em que alguém escrever algo nela.
+
+### 3. Você lê os backlinks ou busca?
+
+**O que olhar, durante:** quando precisou lembrar de alguém, você rolou a página da
+entidade até "Onde aparece", ou apertou `Ctrl+K`?
+
+- Leu o "Onde aparece" → o grafo é o produto, e a Fase 1 (atos, arcos, timeline)
+  está no rumo certo.
+- Foi de `Ctrl+K` toda vez → **o grafo é decoração e a busca é o produto.** A Fase 1
+  troca de assunto: busca de conteúdo (FTS), `ts_headline`, filtro por tipo — e
+  atos, arcos e timeline saem da frente da fila.
+
+### 4. O que você tentou fazer e o app não deixou?
+
+Essa fica como está: é a única que não dá para instrumentar. Anote na hora, no
+próprio app, com as palavras que vierem.
+
+**A resposta a essas quatro perguntas vale mais que este documento inteiro** — e as
+três primeiras agora se respondem olhando, não lembrando.
 
 ---
 
