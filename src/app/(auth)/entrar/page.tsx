@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation';
 
-import { auth, sessaoAtual } from '@/auth';
+import { obterAuth, sessaoAtual } from '@/auth';
 import { Button } from '@/components/ui/button';
 
 export const metadata = { title: 'Entrar · Grimório' };
 
 async function entrarComGithub() {
   'use server';
-  const { url } = await auth.api.signInSocial({
+  const { url } = await obterAuth().api.signInSocial({
     body: { provider: 'github', callbackURL: '/' },
   });
   // Sem `url` só se o provedor estiver mal configurado — falhar alto é melhor

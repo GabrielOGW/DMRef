@@ -38,8 +38,10 @@ test('Ctrl+K acha pelo pedaço do meio do nome, de qualquer página', async ({ p
   await expect(paleta(page)).toBeVisible();
 
   // "morg" é o caso que o operador % do pg_trgm não acha (ARQUITETURA.md §3.6).
+  // A folga do timeout é da primeira compilação de /api/busca no `next dev`, não
+  // da consulta: o trigram responde em milissegundos.
   await page.keyboard.type('morg');
-  await expect(paleta(page).getByText('Lady Morgana')).toBeVisible({ timeout: 5_000 });
+  await expect(paleta(page).getByText('Lady Morgana')).toBeVisible({ timeout: 20_000 });
 
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Lady Morgana' })).toBeVisible();
@@ -52,7 +54,7 @@ test('"rod" acha Capitão Roderick, e o que não existe não inventa', async ({ 
 
   await page.keyboard.press('ControlOrMeta+k');
   await page.keyboard.type('rod');
-  await expect(paleta(page).getByText('Capitão Roderick')).toBeVisible({ timeout: 5_000 });
+  await expect(paleta(page).getByText('Capitão Roderick')).toBeVisible({ timeout: 20_000 });
   await expect(paleta(page).getByText('Lady Morgana')).toBeHidden();
 
   // Apagar a busca não pode deixar o resultado anterior na tela.
@@ -61,5 +63,5 @@ test('"rod" acha Capitão Roderick, e o que não existe não inventa', async ({ 
   await expect(paleta(page).getByText('Digite para buscar')).toBeVisible();
 
   await page.keyboard.type('grifo alado');
-  await expect(paleta(page).getByText('Nada com esse nome')).toBeVisible({ timeout: 5_000 });
+  await expect(paleta(page).getByText('Nada com esse nome')).toBeVisible({ timeout: 20_000 });
 });
